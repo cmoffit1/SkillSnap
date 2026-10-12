@@ -10,10 +10,11 @@
 using System;
 using System.Reflection;
 
+[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("3e7b3b2c-be2b-46b4-8d6c-1ab4f7a8e0fe")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("SkillSnap.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3842431f7184f86b61011043b42bf039b9e4ae46")]
 [assembly: System.Reflection.AssemblyProductAttribute("SkillSnap.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SkillSnap.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

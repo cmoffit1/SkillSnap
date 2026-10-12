@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/SkillSnap.Api.Tests/SkillSnap.Api.Tests.csproj" />
+  </Folder>
   <Project Path="SkillSnap.Api/SkillSnap.Api.csproj" />
   <Project Path="SkillSnap.Client/SkillSnap.Client.csproj" />
 </Solution>

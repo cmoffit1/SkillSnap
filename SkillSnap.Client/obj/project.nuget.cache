@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "+Pa7Zo2Ai68=",
+  "dgSpecHash": "kL83A9HUCJQ=",
   "success": true,
   "projectFilePath": "C:\\Users\\jeste\\OneDrive\\Documents\\Coursera-Chris16\\SkillSnap\\SkillSnap.Client\\SkillSnap.Client.csproj",
   "expectedPackageFiles": [
@@ -8,6 +8,7 @@
     "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.authorization\\10.0.12\\microsoft.aspnetcore.authorization.10.0.12.nupkg.sha512",
     "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.components\\10.0.12\\microsoft.aspnetcore.components.10.0.12.nupkg.sha512",
     "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.components.analyzers\\10.0.12\\microsoft.aspnetcore.components.analyzers.10.0.12.nupkg.sha512",
+    "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.components.authorization\\10.0.12\\microsoft.aspnetcore.components.authorization.10.0.12.nupkg.sha512",
     "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.components.forms\\10.0.12\\microsoft.aspnetcore.components.forms.10.0.12.nupkg.sha512",
     "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.components.web\\10.0.12\\microsoft.aspnetcore.components.web.10.0.12.nupkg.sha512",
     "C:\\Users\\jeste\\.nuget\\packages\\microsoft.aspnetcore.components.webassembly\\10.0.12\\microsoft.aspnetcore.components.webassembly.10.0.12.nupkg.sha512",
