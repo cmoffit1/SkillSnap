@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 
@@ -34,7 +35,7 @@ public sealed class SkillSnapAuthStateProvider(
         using var request = CreateCredentialedRequest(HttpMethod.Post, "auth/logout");
         request.Headers.Add("X-SkillSnap-Refresh", "1");
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, cancellationToken);
 
         _session = null;
         _initialized = true;
@@ -65,7 +66,7 @@ public sealed class SkillSnapAuthStateProvider(
         using var request = CreateCredentialedRequest(HttpMethod.Post, endpoint);
         request.Content = JsonContent.Create(payload);
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, cancellationToken);
 
         var session = await response.Content.ReadFromJsonAsync<AuthResponse>(
             cancellationToken: cancellationToken)
@@ -107,7 +108,7 @@ public sealed class SkillSnapAuthStateProvider(
             return;
         }
 
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, cancellationToken);
         var session = await response.Content.ReadFromJsonAsync<AuthResponse>(
             cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException("The refresh endpoint returned an empty response.");
@@ -120,6 +121,73 @@ public sealed class SkillSnapAuthStateProvider(
         _session = session;
         _initialized = true;
         NotifyAuthenticationStateChanged(Task.FromResult(CreateAuthenticationState()));
+    }
+
+    private static async Task EnsureSuccessAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+        var message = GetApiErrorMessage(responseBody);
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "The account details were rejected. Check the form and try again.",
+                HttpStatusCode.Unauthorized => "The email or password is incorrect.",
+                _ => $"The authentication request failed (HTTP {(int)response.StatusCode})."
+            };
+        }
+
+        throw new AuthApiException(response.StatusCode, message);
+    }
+
+    private static string? GetApiErrorMessage(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+            if (root.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Array)
+            {
+                var messages = errors.EnumerateArray()
+                    .Where(error => error.ValueKind == JsonValueKind.String)
+                    .Select(error => error.GetString())
+                    .Where(message => !string.IsNullOrWhiteSpace(message));
+                var combined = string.Join(" ", messages);
+                if (!string.IsNullOrWhiteSpace(combined))
+                {
+                    return combined;
+                }
+            }
+
+            foreach (var propertyName in new[] { "detail", "title" })
+            {
+                if (root.TryGetProperty(propertyName, out var value) &&
+                    value.ValueKind == JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(value.GetString()))
+                {
+                    return value.GetString();
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     private AuthenticationState CreateAuthenticationState()

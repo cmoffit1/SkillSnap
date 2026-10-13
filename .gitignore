@@ -1,0 +1,31 @@
+# .NET build and test output
+**/bin/
+**/obj/
+**/TestResults/
+artifacts/
+
+# Visual Studio user-specific files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Local-only settings and secret files
+**/secrets.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+*.publishsettings
+**/Properties/PublishProfiles/*.pubxml
+**/Properties/PublishProfiles/*.pubxml.user
+
+# Local database files and signing certificates/keys
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.pfx
+*.p12
+*.pem
+*.key

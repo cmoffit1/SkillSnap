@@ -1,0 +1,191 @@
+@page "/account"
+@using System.Security.Claims
+@using SkillSnap.Client.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@inject SkillSnapAuthStateProvider AuthProvider
+
+<PageTitle>Account | SkillSnap</PageTitle>
+
+<main class="account-page">
+    <section class="account-panel">
+        <AuthorizeView>
+            <Authorized Context="authState">
+                <p class="eyebrow">ASP.NET Core Identity</p>
+                <h1>Your account</h1>
+                <p class="intro">You are signed in with your SkillSnap account.</p>
+
+                <dl class="identity-details">
+                    <div>
+                        <dt>Email</dt>
+                        <dd>@authState.User.Identity?.Name</dd>
+                    </div>
+                    <div>
+                        <dt>Identity user ID</dt>
+                        <dd class="user-id">@authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value</dd>
+                    </div>
+                    <div>
+                        <dt>Roles</dt>
+                        <dd>
+                            @foreach (var role in authState.User.FindAll(ClaimTypes.Role).Select(claim => claim.Value))
+                            {
+                                <span class="role-tag">@role</span>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <p class="form-error" role="alert">@_errorMessage</p>
+                }
+
+                <button class="btn btn-outline-primary" type="button" disabled="@_isBusy" @onclick="LogoutAsync">
+                    @(_isBusy ? "Signing out..." : "Sign out")
+                </button>
+            </Authorized>
+            <NotAuthorized Context="notAuthorizedContext">
+                <p class="eyebrow">ASP.NET Core Identity</p>
+                <h1>@(_isRegistering ? "Create your account" : "Welcome back")</h1>
+                <p class="intro">
+                    @(_isRegistering
+                        ? "Register to create your SkillSnap account."
+                        : "Sign in to see your account details.")
+                </p>
+
+                <EditForm Model="_form" OnValidSubmit="SubmitAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="form-field">
+                        <label for="account-email">Email</label>
+                        <InputText id="account-email"
+                                   class="form-control"
+                                   type="email"
+                                   autocomplete="email"
+                                   @bind-Value="_form.Email" />
+                        <ValidationMessage For="@(() => _form.Email)" />
+                    </div>
+
+                    <div class="form-field">
+                        <label for="account-password">Password</label>
+                        <InputText id="account-password"
+                                   class="form-control"
+                                   type="password"
+                                   autocomplete="@(_isRegistering ? "new-password" : "current-password")"
+                                   @bind-Value="_form.Password" />
+                        <ValidationMessage For="@(() => _form.Password)" />
+                        @if (_isRegistering)
+                        {
+                            <small>Use at least 12 characters, including uppercase, lowercase, a number, and a symbol.</small>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <p class="form-error" role="alert">@_errorMessage</p>
+                    }
+
+                    <button class="btn btn-primary submit-button" type="submit" disabled="@_isBusy">
+                        @if (_isBusy)
+                        {
+                            <span>Working...</span>
+                        }
+                        else
+                        {
+                            <span>@(_isRegistering ? "Create account" : "Sign in")</span>
+                        }
+                    </button>
+                </EditForm>
+
+                <p class="form-switch">
+                    @if (_isRegistering)
+                    {
+                        <span>Already have an account?</span>
+                        <button type="button" @onclick="SwitchToLogin">Sign in</button>
+                    }
+                    else
+                    {
+                        <span>New to SkillSnap?</span>
+                        <button type="button" @onclick="SwitchToRegister">Create an account</button>
+                    }
+                </p>
+            </NotAuthorized>
+        </AuthorizeView>
+    </section>
+</main>
+
+@code {
+    private AccountFormModel _form = new();
+    private bool _isRegistering;
+    private bool _isBusy;
+    private string? _errorMessage;
+
+    private async Task SubmitAsync()
+    {
+        _isBusy = true;
+        _errorMessage = null;
+        try
+        {
+            if (_isRegistering)
+            {
+                await AuthProvider.RegisterAsync(new RegisterRequest(_form.Email, _form.Password));
+            }
+            else
+            {
+                await AuthProvider.LoginAsync(new LoginRequest(_form.Email, _form.Password));
+            }
+        }
+        catch (AuthApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _errorMessage = "Could not reach the authentication service. Check your connection and try again.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task LogoutAsync()
+    {
+        _isBusy = true;
+        _errorMessage = null;
+        try
+        {
+            await AuthProvider.LogoutAsync();
+        }
+        catch (AuthApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _errorMessage = "Could not reach the authentication service. Check your connection and try again.";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void SwitchToLogin()
+    {
+        _isRegistering = false;
+        ResetForm();
+    }
+
+    private void SwitchToRegister()
+    {
+        _isRegistering = true;
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        _form = new AccountFormModel();
+        _errorMessage = null;
+    }
+}
