@@ -37,21 +37,25 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ291bnRlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Pages/Home.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSG9tZS5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Pages/NotFound.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTm90Rm91bmQucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
-[C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Pages/Weather.razor]
-build_metadata.AdditionalFiles.TargetPath = UGFnZXNcV2VhdGhlci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = X0ltcG9ydHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Components/Portfolio/ProfileCard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQb3J0Zm9saW9cUHJvZmlsZUNhcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-lnihankged
+
+[C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Components/Portfolio/ProjectList.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQb3J0Zm9saW9cUHJvamVjdExpc3QucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-7a52wruuc4
+
+[C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Components/Portfolio/SkillTags.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQb3J0Zm9saW9cU2tpbGxUYWdzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-gq7mh8oirp
 
 [C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Layout/MainLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE1haW5MYXlvdXQucmF6b3I=
@@ -60,3 +64,7 @@ build_metadata.AdditionalFiles.CssScope = b-o27u1a926e
 [C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Layout/NavMenu.razor]
 build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE5hdk1lbnUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-ntuhfjtflo
+
+[C:/Users/jeste/OneDrive/Documents/Coursera-Chris16/SkillSnap/SkillSnap.Client/Pages/Home.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcSG9tZS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-bsff0ti1nv

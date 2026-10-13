@@ -1,0 +1,21 @@
+<section class="profile-card" aria-labelledby="profile-card-name">
+    <img class="profile-picture"
+         src="@(string.IsNullOrWhiteSpace(ProfileImageUrl) ? "images/profile-placeholder.svg" : ProfileImageUrl)"
+         alt="@($"{Name} profile picture")" />
+    <div class="profile-copy">
+        <p class="eyebrow">Portfolio</p>
+        <h1 id="profile-card-name">@Name</h1>
+        <p class="profile-bio">@Bio</p>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Bio { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ProfileImageUrl { get; set; }
+}

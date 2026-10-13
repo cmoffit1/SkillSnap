@@ -1,3 +1,183 @@
+/* /Components/Portfolio/ProfileCard.razor.rz.scp.css */
+.profile-card[b-lnihankged] {
+    align-items: center;
+    background: linear-gradient(125deg, #172554, #1e3a5f 55%, #155e75);
+    border-radius: 1.25rem;
+    color: #f8fafc;
+    display: flex;
+    gap: 1.5rem;
+    min-height: 13rem;
+    padding: clamp(1.5rem, 5vw, 3rem);
+}
+
+.profile-picture[b-lnihankged] {
+    background: #dbeafe;
+    border: 4px solid rgb(255 255 255 / 75%);
+    border-radius: 50%;
+    flex: 0 0 auto;
+    height: 8rem;
+    object-fit: cover;
+    width: 8rem;
+}
+
+.profile-copy[b-lnihankged] {
+    max-width: 42rem;
+}
+
+.eyebrow[b-lnihankged] {
+    color: #bae6fd;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+}
+
+h1[b-lnihankged] {
+    font-size: clamp(1.8rem, 5vw, 2.75rem);
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+
+.profile-bio[b-lnihankged] {
+    color: #e2e8f0;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    margin: 0;
+}
+
+@media (max-width: 540px) {
+    .profile-card[b-lnihankged] {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+/* /Components/Portfolio/ProjectList.razor.rz.scp.css */
+.section-heading[b-7a52wruuc4] {
+    margin-bottom: 1.25rem;
+}
+
+.eyebrow[b-7a52wruuc4] {
+    color: #0e7490;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+h2[b-7a52wruuc4] {
+    color: #0f172a;
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.project-grid[b-7a52wruuc4] {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+
+.project-card[b-7a52wruuc4] {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 5%);
+    overflow: hidden;
+}
+
+.project-image[b-7a52wruuc4] {
+    aspect-ratio: 16 / 9;
+    display: block;
+    object-fit: cover;
+    width: 100%;
+}
+
+.project-copy[b-7a52wruuc4] {
+    padding: 1.2rem;
+}
+
+h3[b-7a52wruuc4] {
+    color: #0f172a;
+    font-size: 1.15rem;
+    font-weight: 650;
+    margin: 0 0 0.5rem;
+}
+
+.project-copy p[b-7a52wruuc4],
+.empty-state[b-7a52wruuc4] {
+    color: #475569;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.empty-state[b-7a52wruuc4] {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+}
+/* /Components/Portfolio/SkillTags.razor.rz.scp.css */
+.section-heading[b-gq7mh8oirp] {
+    margin-bottom: 1.1rem;
+}
+
+.eyebrow[b-gq7mh8oirp] {
+    color: #0e7490;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+h2[b-gq7mh8oirp] {
+    color: #0f172a;
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.skill-list[b-gq7mh8oirp] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.skill-tag[b-gq7mh8oirp] {
+    align-items: center;
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    border-radius: 999px;
+    color: #155e75;
+    display: inline-flex;
+    gap: 0.55rem;
+    padding: 0.55rem 0.9rem;
+}
+
+.skill-name[b-gq7mh8oirp] {
+    font-weight: 650;
+}
+
+.skill-level[b-gq7mh8oirp] {
+    border-left: 1px solid #a5f3fc;
+    color: #475569;
+    font-size: 0.78rem;
+    padding-left: 0.55rem;
+}
+
+.empty-state[b-gq7mh8oirp] {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    color: #475569;
+    margin: 0;
+    padding: 1.25rem;
+}
 /* /Layout/MainLayout.razor.rz.scp.css */
 .page[b-o27u1a926e] {
     position: relative;
@@ -159,4 +339,12 @@ main[b-o27u1a926e] {
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
     }
+}
+/* /Pages/Home.razor.rz.scp.css */
+.portfolio-page[b-bsff0ti1nv] {
+    display: grid;
+    gap: clamp(2rem, 5vw, 3.5rem);
+    margin: 0 auto;
+    max-width: 70rem;
+    padding: 1rem 0 3rem;
 }

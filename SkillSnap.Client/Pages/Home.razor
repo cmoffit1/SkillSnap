@@ -1,7 +1,26 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>SkillSnap | Portfolio</PageTitle>
 
-<h1>Hello, world!</h1>
+<main class="portfolio-page">
+    <ProfileCard Name="Jordan Developer"
+                 Bio="Full-stack developer passionate about learning new tech." />
 
-Welcome to your new app.
+    <ProjectList Projects="_projects" />
+
+    <SkillTags Skills="_skills" />
+</main>
+
+@code {
+    private static readonly IReadOnlyList<ProjectDisplayModel> _projects =
+    [
+        new("Task Tracker", "Manage tasks effectively."),
+        new("Weather App", "Forecast weather using APIs.")
+    ];
+
+    private static readonly IReadOnlyList<SkillDisplayModel> _skills =
+    [
+        new("C#", "Advanced"),
+        new("Blazor", "Intermediate")
+    ];
+}

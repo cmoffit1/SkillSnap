@@ -1,0 +1,31 @@
+<section class="skills-section" aria-labelledby="skill-tags-heading">
+    <div class="section-heading">
+        <p class="eyebrow">What I work with</p>
+        <h2 id="skill-tags-heading">Skills</h2>
+    </div>
+
+    @if (Skills.Count == 0)
+    {
+        <p class="empty-state">No skills to show yet.</p>
+    }
+    else
+    {
+        <ul class="skill-list">
+            @foreach (var skill in Skills)
+            {
+                <li class="skill-tag">
+                    <span class="skill-name">@skill.Name</span>
+                    @if (!string.IsNullOrWhiteSpace(skill.Level))
+                    {
+                        <span class="skill-level">@skill.Level</span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<SkillDisplayModel> Skills { get; set; } = Array.Empty<SkillDisplayModel>();
+}
