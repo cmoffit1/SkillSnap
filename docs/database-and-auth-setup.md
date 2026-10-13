@@ -4,6 +4,12 @@
 
 The API uses SQL Server for both its local database and Azure SQL. Local secrets are stored with .NET User Secrets, not in `appsettings.json`.
 
+Both projects have HTTPS-only local launch profiles. Trust the ASP.NET Core development certificate on a new machine before running the solution:
+
+```powershell
+dotnet dev-certs https --trust
+```
+
 ```powershell
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=.\SQLEXPRESS;Database=SkillSnap;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True" --project .\SkillSnap.Api\SkillSnap.Api.csproj
 
@@ -53,6 +59,7 @@ For the App Service:
 
 6. Do not set `ApiBaseAddress` in production. The client defaults to the same HTTPS origin as the API. The separate client development server uses `https://localhost:7250`, configured in `SkillSnap.Client\wwwroot\appsettings.Development.json`.
 7. Use an App Service plan that supports the selected application stack. The Free F1 tier doesn't support custom domains, but the built-in `*.azurewebsites.net` hostname is sufficient for the same-origin deployment. Free-tier quotas and availability limits still apply.
+8. Enable **HTTPS Only** in the App Service configuration so Azure rejects plain-HTTP client requests. The API also emits HSTS outside Development and redirects HTTP requests to HTTPS.
 
 In Development, `Cors:AllowedOrigins` is required because the client and API use separate local HTTPS ports. Production doesn't need CORS when the client is served by the API from the same origin. The refresh cookie is `HttpOnly`, `Secure`, and `SameSite=Lax`; refresh/logout also require the `X-SkillSnap-Refresh` header, and the client sends credentials only for authentication requests.
 

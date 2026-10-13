@@ -148,6 +148,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+else if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();

@@ -5,7 +5,7 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
   "mainAssemblyName": "SkillSnap.Client",
   "applicationEnvironment": "Development",
   "resources": {
-    "hash": "sha256-KdcIlBqjKseNKjryS0+TSXt1CqO49n+HsV221u7ABWg=",
+    "hash": "sha256-6waJBUzCyiXygnqg4nvpH1KY8rRaYTd2Fr/Vz92KrRQ=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.b6l13xorvf.js"
@@ -1248,16 +1248,16 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
       },
       {
         "virtualPath": "SkillSnap.Client.wasm",
-        "name": "SkillSnap.Client.r8q0hc8ydj.wasm",
-        "hash": "sha256-2+V5WgKluIVssPV1hSIZ3PMSXxxRqI4nxQ3CVSaD3mI=",
+        "name": "SkillSnap.Client.x4wkf24p7m.wasm",
+        "hash": "sha256-T+nrYFhczpDTNhfe7E01H9zQAbJjTNzNYPAX/X6G/vI=",
         "cache": "force-cache"
       }
     ],
     "pdb": [
       {
         "virtualPath": "SkillSnap.Client.pdb",
-        "name": "SkillSnap.Client.g01eepynav.pdb",
-        "hash": "sha256-oK7op4cY4EttJAgJaBqEl8qATUL9PYBpUNcXGemTNdk=",
+        "name": "SkillSnap.Client.q1rtmx0gsp.pdb",
+        "hash": "sha256-LihME9rSkzkF21JFB7sVuIqNz1vV+an7HBgIvAZ59jc=",
         "cache": "force-cache"
       }
     ],
