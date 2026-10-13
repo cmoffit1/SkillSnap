@@ -23,4 +23,6 @@ public class PortfolioUser
 
     [InverseProperty(nameof(Skill.PortfolioUser))]
     public List<Skill> Skills { get; set; } = new List<Skill>();
+
+   
 }
