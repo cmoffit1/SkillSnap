@@ -72,6 +72,8 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSett
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ListCache>();
+builder.Services.AddSingleton<SkillLevelCache>();
+builder.Services.AddHostedService<SkillLevelWarmup>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

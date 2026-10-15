@@ -10,7 +10,7 @@ namespace SkillSnap.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class SkillsController(SkillSnapContext db, ListCache cache) : ControllerBase
+public class SkillsController(SkillSnapContext db, ListCache cache, SkillLevelCache levels) : ControllerBase
 {
     [ProducesResponseType<PagedResult<SkillDto>>(200)]
     [HttpGet(Name = "GetSkills")]
@@ -18,7 +18,7 @@ public class SkillsController(SkillSnapContext db, ListCache cache) : Controller
         int? page, int? pageSize, bool all, CancellationToken ct)
     {
         var (p, size) = PagedResult<SkillDto>.Normalize(page, pageSize);
-        var owner = await db.GetVisibleOwnerIdAsync(User, all, ct);
+        var owner = await db.GetVisibleOwnerIdAsync(User, all, cache, ct);
 
         return await cache.GetOrCreateAsync(CacheSets.Skills, owner?.ToString() ?? "all", p, size, async () =>
         {
@@ -50,7 +50,7 @@ public class SkillsController(SkillSnapContext db, ListCache cache) : Controller
     [HttpGet("{id}", Name = "GetSkill")]
     public async Task<ActionResult<SkillDto>> GetSkillById(int id, CancellationToken ct)
     {
-        var owner = await db.GetVisibleOwnerIdAsync(User, all: true, ct);
+        var owner = await db.GetVisibleOwnerIdAsync(User, all: true, cache, ct);
         var query = db.Skills.AsNoTracking().Where(skill => skill.Id == id);
         if (owner is { } ownerId)
         {
@@ -128,12 +128,8 @@ public class SkillsController(SkillSnapContext db, ListCache cache) : Controller
         return new SkillDto(skill.Id, skill.Name, skill.SkillLevelId, levelName, skill.PortfolioUserId);
     }
 
-    private Task<string?> FindLevelNameAsync(int levelId, CancellationToken ct) =>
-        db.SkillLevels
-            .AsNoTracking()
-            .Where(level => level.Id == levelId)
-            .Select(level => (string?)level.Name)
-            .FirstOrDefaultAsync(ct);
+    private async Task<string?> FindLevelNameAsync(int levelId, CancellationToken ct) =>
+        (await levels.GetAsync(db, ct)).FirstOrDefault(level => level.Id == levelId)?.Name;
 
     private ActionResult InvalidLevel() =>
         ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>

@@ -13,7 +13,7 @@ public static class PortfolioOwnership
     /// nothing) when the caller has no portfolio yet.
     /// </summary>
     public static async Task<int?> GetVisibleOwnerIdAsync(
-        this SkillSnapContext db, ClaimsPrincipal principal, bool all, CancellationToken ct)
+        this SkillSnapContext db, ClaimsPrincipal principal, bool all, ListCache cache, CancellationToken ct)
     {
         if (all && principal.IsInRole(Roles.Admin))
         {
@@ -27,11 +27,12 @@ public static class PortfolioOwnership
             return 0;
         }
 
-        return await db.Users
-                   .AsNoTracking()
-                   .Where(user => user.Id == userId)
-                   .Select(user => user.PortfolioUserId)
-                   .FirstOrDefaultAsync(ct) ?? 0;
+        return await cache.GetOwnerIdAsync(userId, async () =>
+            await db.Users
+                .AsNoTracking()
+                .Where(user => user.Id == userId)
+                .Select(user => user.PortfolioUserId)
+                .FirstOrDefaultAsync(ct) ?? 0);
     }
 
     /// <summary>

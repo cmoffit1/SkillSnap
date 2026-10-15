@@ -47,7 +47,7 @@
 - The system should include monitoring and alerting to detect and respond to issues promptly.
 - The system will use azure key vault for managing secrets and sensitive configuration data.
 
-- Caching: in-memory only for now. `ListCache` (`SkillSnap.Api\Data\ListCache.cs`) caches paged project/skill lists for 1 minute, keyed by set, owner scope, page and size; every create/update/seed calls `cache.Invalidate(CacheSets.X)`. The skill level list is cached for 10 minutes in `SkillLevelsController`. Single-item GETs are not cached.
+- Caching: in-memory only for now. `ListCache` (`SkillSnap.Api\Data\ListCache.cs`) caches paged project/skill lists for 1 minute, keyed by set, owner scope, page and size; every create/update/seed calls `cache.Invalidate(CacheSets.X)`. The skill level list is held in memory for 24 hours by `SkillLevelCache` and loaded at startup by the `SkillLevelWarmup` hosted service (falls back to loading on first use if the database isn't ready); call `SkillLevelCache.Invalidate()` when levels change. Single-item GETs are not cached.
 
 
 - Controllers carry `[ApiVersion("1.0")]`; versions are read from the `api-version` header or query string only (no URL segments).

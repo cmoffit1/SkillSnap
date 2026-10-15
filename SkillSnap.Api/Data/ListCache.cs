@@ -33,4 +33,25 @@ public class ListCache(IMemoryCache cache)
     }
 
     public void Invalidate(string set) => versions.AddOrUpdate(set, 1, (_, version) => version + 1);
+
+    /// <summary>
+    /// Caches an account's portfolio ID so list requests don't query for it each time. Only real
+    /// IDs are kept: 0 means "no portfolio yet", which changes on the account's first create.
+    /// </summary>
+    public async Task<int> GetOwnerIdAsync(string userId, Func<Task<int>> factory)
+    {
+        var key = $"owner:{userId}";
+        if (cache.TryGetValue(key, out int cached))
+        {
+            return cached;
+        }
+
+        var value = await factory();
+        if (value != 0)
+        {
+            cache.Set(key, value, TimeSpan.FromMinutes(10));
+        }
+
+        return value;
+    }
 }

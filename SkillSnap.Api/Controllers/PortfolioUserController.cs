@@ -9,7 +9,7 @@ namespace SkillSnap.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class PortfolioUserController(SkillSnapContext db, ListCache cache) : ControllerBase
+public class PortfolioUserController(SkillSnapContext db, ListCache cache, SkillLevelCache levels) : ControllerBase
 {
     [ProducesResponseType<PagedResult<PortfolioUserDto>>(200)]
     [HttpGet(Name = "GetPortfolioUsers")]
@@ -54,8 +54,8 @@ public class PortfolioUserController(SkillSnapContext db, ListCache cache) : Con
         CreatePortfolioUserRequest request, CancellationToken ct)
     {
         var levelIds = request.Skills.Select(skill => skill.SkillLevelId).Distinct().ToList();
-        var knownLevels = await db.SkillLevels.CountAsync(level => levelIds.Contains(level.Id), ct);
-        if (knownLevels != levelIds.Count)
+        var knownLevelIds = (await levels.GetAsync(db, ct)).Select(level => level.Id).ToHashSet();
+        if (!levelIds.All(knownLevelIds.Contains))
         {
             return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
             {

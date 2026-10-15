@@ -18,7 +18,7 @@ public class ProjectsController(SkillSnapContext db, ListCache cache) : Controll
         int? page, int? pageSize, bool all, CancellationToken ct)
     {
         var (p, size) = PagedResult<ProjectDto>.Normalize(page, pageSize);
-        var owner = await db.GetVisibleOwnerIdAsync(User, all, ct);
+        var owner = await db.GetVisibleOwnerIdAsync(User, all, cache, ct);
 
         return await cache.GetOrCreateAsync(CacheSets.Projects, owner?.ToString() ?? "all", p, size, async () =>
         {
@@ -50,7 +50,7 @@ public class ProjectsController(SkillSnapContext db, ListCache cache) : Controll
     [HttpGet("{id}", Name = "GetProject")]
     public async Task<ActionResult<ProjectDto>> GetProjectById(int id, CancellationToken ct)
     {
-        var owner = await db.GetVisibleOwnerIdAsync(User, all: true, ct);
+        var owner = await db.GetVisibleOwnerIdAsync(User, all: true, cache, ct);
         var query = db.Projects.AsNoTracking().Where(project => project.Id == id);
         if (owner is { } ownerId)
         {
