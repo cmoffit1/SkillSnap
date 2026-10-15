@@ -38,5 +38,6 @@ builder.Services.AddScoped<UserState>();
 
 builder.Services.AddScoped<SkillService>();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<PortfolioService>();
 
 await builder.Build().RunAsync();

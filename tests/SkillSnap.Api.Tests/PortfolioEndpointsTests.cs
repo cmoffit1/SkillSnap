@@ -198,6 +198,63 @@ public sealed class PortfolioEndpointsTests(ApiFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task Me_returns_the_callers_portfolio_banner()
+    {
+        using var client = await CreateSignedInClientAsync();
+        using var none = await client.GetAsync("/api/portfoliouser/me");
+        Assert.Equal(HttpStatusCode.NotFound, none.StatusCode);
+
+        await AddSkillAsync(client, "Banner skill");
+        var me = await client.GetFromJsonAsync<PortfolioProfileDto>("/api/portfoliouser/me");
+        Assert.False(string.IsNullOrWhiteSpace(me!.Name));
+
+        using var anonymous = CreateClient();
+        using var denied = await anonymous.GetAsync("/api/portfoliouser/me");
+        Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+    }
+
+    [Fact]
+    public async Task Only_admins_can_delete_projects_and_skills()
+    {
+        using var staff = await CreateSignedInClientAsync();
+        var skill = await AddSkillAsync(staff, "To delete");
+        using var projectResponse = await staff.PostAsJsonAsync("/api/projects", new
+        {
+            Title = "To delete",
+            Description = "Doomed",
+            ImageUrl = "https://example.test/d.png"
+        });
+        var project = (await projectResponse.Content.ReadFromJsonAsync<ProjectDto>())!;
+
+        using var staffProject = await staff.DeleteAsync($"/api/projects/{project.Id}");
+        using var staffSkill = await staff.DeleteAsync($"/api/skills/{skill.Id}");
+        Assert.Equal(HttpStatusCode.Forbidden, staffProject.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, staffSkill.StatusCode);
+
+        using var anonymous = CreateClient();
+        using var anonymousDelete = await anonymous.DeleteAsync($"/api/skills/{skill.Id}");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousDelete.StatusCode);
+
+        using var admin = await CreateSignedInClientAsync($"admin-{Guid.NewGuid():N}@example.test", makeAdmin: true);
+        var before = await staff.GetFromJsonAsync<PagedResult<SkillDto>>("/api/skills?page=1&pageSize=100");
+        Assert.Contains(before!.Items, s => s.Id == skill.Id);
+
+        using var adminProject = await admin.DeleteAsync($"/api/projects/{project.Id}");
+        using var adminSkill = await admin.DeleteAsync($"/api/skills/{skill.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, adminProject.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, adminSkill.StatusCode);
+
+        // The cached list must not keep showing the deleted record.
+        var after = await staff.GetFromJsonAsync<PagedResult<SkillDto>>("/api/skills?page=1&pageSize=100");
+        Assert.DoesNotContain(after!.Items, s => s.Id == skill.Id);
+        using var gone = await admin.GetAsync($"/api/skills/{skill.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, gone.StatusCode);
+
+        using var again = await admin.DeleteAsync($"/api/projects/{project.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, again.StatusCode);
+    }
+
+    [Fact]
     public async Task Only_admins_can_update_projects_and_skills()
     {
         using var staff = await CreateSignedInClientAsync();

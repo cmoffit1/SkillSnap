@@ -1,6 +1,8 @@
 @page "/projects/{Id:int}"
 @using SkillSnap.Client.Services
 @inject ProjectService ProjectService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject ILogger<ProjectDetail> Logger
 
 <PageTitle>@(_project?.Title ?? "Project") | SkillSnap</PageTitle>
@@ -30,10 +32,6 @@
             else
             {
                 <article class="card shadow-sm">
-                    @if (!string.IsNullOrWhiteSpace(_project.ImageUrl))
-                    {
-                        <img class="card-img-top" src="@_project.ImageUrl" alt="" />
-                    }
                     <div class="card-body">
                         <h1 class="card-title h3">@_project.Title</h1>
                         <p class="card-text">@_project.Description</p>
@@ -51,10 +49,25 @@
                             </p>
                         }
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(_project.ImageUrl))
+                    {
+                        <img class="card-img-bottom" src="@_project.ImageUrl" alt="" />
+                    }
                 </article>
 
                 <AuthorizeView Roles="Admin">
-                    <a class="btn btn-outline-primary mt-3" href="projects/@Id/edit?page=@(PageParameter ?? 1)">Edit</a>
+                    <div class="d-flex gap-2 mt-3">
+                        <a class="btn btn-outline-primary @(_isDeleting ? "disabled" : null)"
+                           href="projects/@Id/edit?page=@(PageParameter ?? 1)">Edit</a>
+                        <button class="btn btn-outline-danger" type="button" disabled="@_isDeleting"
+                                @onclick="DeleteAsync">
+                            @(_isDeleting ? "Deleting…" : "Delete")
+                        </button>
+                    </div>
+                    @if (_deleteError is not null)
+                    {
+                        <div class="mt-3"><ErrorAlert Message="@_deleteError" /></div>
+                    }
                 </AuthorizeView>
             }
         </Authorized>
@@ -66,11 +79,40 @@
     private bool _isLoading = true;
     private string? _errorMessage;
 
+    private bool _isDeleting;
+    private string? _deleteError;
+
     [Parameter] public int Id { get; set; }
 
     [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
 
     protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task DeleteAsync()
+    {
+        if (_project is null || !await JS.InvokeAsync<bool>(
+                "confirm", $"Delete the project \"{_project.Title}\"? This can't be undone."))
+        {
+            return;
+        }
+
+        _isDeleting = true;
+        _deleteError = null;
+        try
+        {
+            await ProjectService.DeleteAsync(Id);
+            Navigation.NavigateTo($"projects?page={PageParameter ?? 1}");
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to delete project {ProjectId}.", Id);
+            _deleteError = ApiErrors.ToMessage(exception, "Unable to delete the project.");
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
 
     // Only http(s) URLs become links, so a stored javascript: URL can't run.
     private static string? SafeUrl(string? value) =>

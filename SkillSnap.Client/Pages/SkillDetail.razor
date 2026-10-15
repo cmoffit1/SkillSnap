@@ -1,6 +1,8 @@
 @page "/skills/{Id:int}"
 @using SkillSnap.Client.Services
 @inject SkillService SkillService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject ILogger<SkillDetail> Logger
 
 <PageTitle>@(_skill?.Name ?? "Skill") | SkillSnap</PageTitle>
@@ -40,7 +42,18 @@
                 </article>
 
                 <AuthorizeView Roles="Admin">
-                    <a class="btn btn-outline-primary mt-3" href="skills/@Id/edit?page=@(PageParameter ?? 1)">Edit</a>
+                    <div class="d-flex gap-2 mt-3">
+                        <a class="btn btn-outline-primary @(_isDeleting ? "disabled" : null)"
+                           href="skills/@Id/edit?page=@(PageParameter ?? 1)">Edit</a>
+                        <button class="btn btn-outline-danger" type="button" disabled="@_isDeleting"
+                                @onclick="DeleteAsync">
+                            @(_isDeleting ? "Deleting…" : "Delete")
+                        </button>
+                    </div>
+                    @if (_deleteError is not null)
+                    {
+                        <div class="mt-3"><ErrorAlert Message="@_deleteError" /></div>
+                    }
                 </AuthorizeView>
             }
         </Authorized>
@@ -52,11 +65,40 @@
     private bool _isLoading = true;
     private string? _errorMessage;
 
+    private bool _isDeleting;
+    private string? _deleteError;
+
     [Parameter] public int Id { get; set; }
 
     [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
 
     protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task DeleteAsync()
+    {
+        if (_skill is null || !await JS.InvokeAsync<bool>(
+                "confirm", $"Delete the skill \"{_skill.Name}\"? This can't be undone."))
+        {
+            return;
+        }
+
+        _isDeleting = true;
+        _deleteError = null;
+        try
+        {
+            await SkillService.DeleteAsync(Id);
+            Navigation.NavigateTo($"skills?page={PageParameter ?? 1}");
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to delete skill {SkillId}.", Id);
+            _deleteError = ApiErrors.ToMessage(exception, "Unable to delete the skill.");
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
 
     private async Task LoadAsync()
     {

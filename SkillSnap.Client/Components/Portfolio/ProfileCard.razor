@@ -3,7 +3,7 @@
          src="@(string.IsNullOrWhiteSpace(ProfileImageUrl) ? "images/profile-placeholder.svg" : ProfileImageUrl)"
          alt="@($"{Name} profile picture")" />
     <div class="profile-copy">
-        <p class="eyebrow">Portfolio</p>
+        <p class="eyebrow">@Eyebrow</p>
         <h1 id="profile-card-name">@Name</h1>
         <p class="profile-bio">@Bio</p>
     </div>
@@ -18,4 +18,7 @@
 
     [Parameter]
     public string? ProfileImageUrl { get; set; }
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Portfolio";
 }

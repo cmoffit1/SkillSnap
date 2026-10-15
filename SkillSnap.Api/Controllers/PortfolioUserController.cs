@@ -31,6 +31,26 @@ public class PortfolioUserController(SkillSnapContext db, ListCache cache, Skill
         return new PagedResult<PortfolioUserDto>(rows.Select(PortfolioUserOperations.ToDto).ToList(), p, size, total);
     }
 
+    [ProducesResponseType<PortfolioProfileDto>(200)]
+    [ProducesResponseType(404)]
+    [HttpGet("me", Name = "GetMyPortfolio")]
+    public async Task<ActionResult<PortfolioProfileDto>> GetMine(CancellationToken ct)
+    {
+        var ownerId = await db.GetVisibleOwnerIdAsync(User, all: false, cache, ct);
+        if (ownerId is null or 0)
+        {
+            return NotFound();
+        }
+
+        var profile = await db.PortfolioUsers
+            .AsNoTracking()
+            .Where(user => user.Id == ownerId)
+            .Select(user => new PortfolioProfileDto(user.Id, user.Name, user.Bio, user.ProfileImageUrl))
+            .FirstOrDefaultAsync(ct);
+
+        return profile is null ? NotFound() : profile;
+    }
+
     [ProducesResponseType<PortfolioUserDto>(200)]
     [ProducesResponseType(404)]
     [HttpGet("{id:int}", Name = "GetPortfolioUser")]

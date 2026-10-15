@@ -128,6 +128,26 @@ public class SkillsController(SkillSnapContext db, ListCache cache, SkillLevelCa
         return new SkillDto(skill.Id, skill.Name, skill.SkillLevelId, levelName, skill.PortfolioUserId);
     }
 
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [HttpDelete("{id:int}", Name = "DeleteSkill")]
+    public async Task<IActionResult> DeleteSkill(int id, CancellationToken ct)
+    {
+        // Tracked delete (not ExecuteDelete) so the AuditInterceptor records it.
+        var skill = await db.Skills.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (skill is null)
+        {
+            return NotFound();
+        }
+
+        db.Skills.Remove(skill);
+        await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Skills);
+
+        return NoContent();
+    }
+
     private async Task<string?> FindLevelNameAsync(int levelId, CancellationToken ct) =>
         (await levels.GetAsync(db, ct)).FirstOrDefault(level => level.Id == levelId)?.Name;
 

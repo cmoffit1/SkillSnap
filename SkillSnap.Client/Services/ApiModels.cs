@@ -10,4 +10,6 @@ public record CreateProjectRequest(string Title, string Description, string Imag
 
 public record CreateSkillRequest(string Name, int SkillLevelId);
 
+public record PortfolioProfileDto(int Id, string Name, string Bio, string ProfileImageUrl);
+
 public record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

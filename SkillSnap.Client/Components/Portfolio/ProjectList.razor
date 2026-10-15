@@ -14,14 +14,14 @@
             @foreach (var project in Projects)
             {
                 <article class="project-card">
-                    @if (!string.IsNullOrWhiteSpace(project.ImageUrl))
-                    {
-                        <img class="project-image" src="@project.ImageUrl" alt="" loading="lazy" />
-                    }
                     <div class="project-copy">
                         <h3>@project.Title</h3>
                         <p>@project.Description</p>
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(project.ImageUrl))
+                    {
+                        <img class="project-image" src="@project.ImageUrl" alt="" loading="lazy" />
+                    }
                 </article>
             }
         </div>

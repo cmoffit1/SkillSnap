@@ -28,6 +28,11 @@ public abstract class ApiClientBase(HttpClient httpClient, SkillSnapAuthStatePro
             ?? throw new ApiException("The server returned an empty response.");
     }
 
+    protected async Task DeleteAsync(string uri, CancellationToken ct)
+    {
+        using var response = await SendAsync(HttpMethod.Delete, uri, null, ct);
+    }
+
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod method, string uri, HttpContent? content, CancellationToken ct)
     {

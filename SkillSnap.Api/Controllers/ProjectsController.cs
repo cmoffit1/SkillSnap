@@ -119,4 +119,24 @@ public class ProjectsController(SkillSnapContext db, ListCache cache) : Controll
         return new ProjectDto(
             project.Id, project.Title, project.Description, project.ImageUrl, project.PortfolioUserId);
     }
+
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [HttpDelete("{id:int}", Name = "DeleteProject")]
+    public async Task<IActionResult> DeleteProject(int id, CancellationToken ct)
+    {
+        // Tracked delete (not ExecuteDelete) so the AuditInterceptor records it.
+        var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        db.Projects.Remove(project);
+        await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Projects);
+
+        return NoContent();
+    }
 }

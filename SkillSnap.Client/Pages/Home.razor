@@ -1,26 +1,121 @@
-﻿@page "/"
+@page "/"
+@implements IDisposable
+@using SkillSnap.Client.Auth
+@using SkillSnap.Client.Services
+@inject UserState UserState
+@inject PortfolioService PortfolioService
+@inject ProjectService ProjectService
+@inject SkillService SkillService
+@inject ILogger<Home> Logger
 
 <PageTitle>SkillSnap | Portfolio</PageTitle>
 
 <main class="portfolio-page">
-    <ProfileCard Name="Jordan Developer"
-                 Bio="Full-stack developer passionate about learning new tech." />
+    @if (!UserState.IsAuthenticated)
+    {
+        <div class="alert alert-info d-flex flex-wrap align-items-center gap-2" role="status">
+            <span class="me-auto">This is a sample portfolio. Sign in or register to build your own.</span>
+            <a class="btn btn-primary btn-sm" href="account">Sign in</a>
+            <a class="btn btn-outline-primary btn-sm" href="account?mode=register">Register</a>
+        </div>
 
-    <ProjectList Projects="_projects" />
+        <ProfileCard Name="Jordan Developer"
+                     Eyebrow="Sample portfolio"
+                     Bio="Full-stack developer passionate about learning new tech." />
 
-    <SkillTags Skills="_skills" />
+        <ProjectList Projects="_sampleProjects" />
+
+        <SkillTags Skills="_sampleSkills" />
+    }
+    else if (_isLoading)
+    {
+        <p role="status">Loading your portfolio…</p>
+    }
+    else
+    {
+        @if (_errorMessage is not null)
+        {
+            <ErrorAlert Message="@_errorMessage" OnRetry="LoadAsync" />
+        }
+
+        <ProfileCard Name="@(_profile?.Name ?? FallbackName)"
+                     Bio="@(_profile?.Bio ?? "Add a project or skill to start building your portfolio.")"
+                     ProfileImageUrl="@_profile?.ProfileImageUrl" />
+
+        <ProjectList Projects="_projects" />
+
+        <SkillTags Skills="_skills" />
+    }
 </main>
 
 @code {
-    private static readonly IReadOnlyList<ProjectDisplayModel> _projects =
+    private static readonly IReadOnlyList<ProjectDisplayModel> _sampleProjects =
     [
         new("Task Tracker", "Manage tasks effectively."),
         new("Weather App", "Forecast weather using APIs.")
     ];
 
-    private static readonly IReadOnlyList<SkillDisplayModel> _skills =
+    private static readonly IReadOnlyList<SkillDisplayModel> _sampleSkills =
     [
         new("C#", "Advanced"),
         new("Blazor", "Intermediate")
     ];
+
+    private PortfolioProfileDto? _profile;
+    private IReadOnlyList<ProjectDisplayModel> _projects = [];
+    private IReadOnlyList<SkillDisplayModel> _skills = [];
+    private bool _isLoading;
+    private string? _errorMessage;
+
+    private string FallbackName => UserState.Current?.Email.Split('@')[0] ?? "My portfolio";
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserState.Changed += OnUserChanged;
+        await UserState.InitializeAsync();
+        await LoadAsync();
+    }
+
+    private void OnUserChanged() => _ = InvokeAsync(async () =>
+    {
+        await LoadAsync();
+        StateHasChanged();
+    });
+
+    private async Task LoadAsync()
+    {
+        _profile = null;
+        _projects = [];
+        _skills = [];
+        _errorMessage = null;
+        if (!UserState.IsAuthenticated)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            _profile = await PortfolioService.GetMineAsync();
+            var projects = await ProjectService.GetAsync(pageSize: 12);
+            var skills = await SkillService.GetAsync(pageSize: 50);
+            _projects = projects.Items
+                .Select(project => new ProjectDisplayModel(project.Title, project.Description, project.ImageUrl))
+                .ToList();
+            _skills = skills.Items
+                .Select(skill => new SkillDisplayModel(skill.Name, skill.Level))
+                .ToList();
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load the home portfolio.");
+            _errorMessage = ApiErrors.ToMessage(exception, "Unable to load your portfolio.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    public void Dispose() => UserState.Changed -= OnUserChanged;
 }

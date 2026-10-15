@@ -121,6 +121,11 @@
     private bool _isBusy;
     private string? _errorMessage;
 
+    [SupplyParameterFromQuery(Name = "mode")] public string? Mode { get; set; }
+
+    protected override void OnInitialized() =>
+        _isRegistering = string.Equals(Mode, "register", StringComparison.OrdinalIgnoreCase);
+
     private async Task SubmitAsync()
     {
         _isBusy = true;

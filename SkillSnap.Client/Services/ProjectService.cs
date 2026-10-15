@@ -27,4 +27,7 @@ public sealed class ProjectService(HttpClient httpClient, SkillSnapAuthStateProv
 
     public Task<ProjectDto> UpdateAsync(int id, CreateProjectRequest request, CancellationToken ct = default) =>
         PutAsync<CreateProjectRequest, ProjectDto>($"api/projects/{id}", request, ct);
+
+    public Task DeleteAsync(int id, CancellationToken ct = default) =>
+        DeleteAsync($"api/projects/{id}", ct);
 }

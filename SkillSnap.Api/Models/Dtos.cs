@@ -44,6 +44,9 @@ public record PortfolioUserDto(
     List<ProjectDto> Projects,
     List<SkillDto> Skills);
 
+/// <summary>The banner details of a portfolio, without its projects and skills.</summary>
+public record PortfolioProfileDto(int Id, string Name, string Bio, string ProfileImageUrl);
+
 /// <summary>
 /// Represents a request to create a new project with its title, description, image URL, and associated portfolio user ID.
 /// </summary>

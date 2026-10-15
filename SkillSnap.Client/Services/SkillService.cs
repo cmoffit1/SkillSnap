@@ -30,4 +30,7 @@ public sealed class SkillService(HttpClient httpClient, SkillSnapAuthStateProvid
 
     public Task<SkillDto> UpdateAsync(int id, CreateSkillRequest request, CancellationToken ct = default) =>
         PutAsync<CreateSkillRequest, SkillDto>($"api/skills/{id}", request, ct);
+
+    public Task DeleteAsync(int id, CancellationToken ct = default) =>
+        DeleteAsync($"api/skills/{id}", ct);
 }
