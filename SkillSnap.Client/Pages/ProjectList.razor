@@ -1,0 +1,194 @@
+@page "/projects"
+@using SkillSnap.Client.Services
+@inject ProjectService ProjectService
+@inject ILogger<ProjectList> Logger
+
+<PageTitle>Projects | SkillSnap</PageTitle>
+
+<main class="container py-4">
+    <section aria-labelledby="projects-heading">
+        <div class="mb-4">
+            <p class="text-uppercase fw-bold text-info mb-1">Selected work</p>
+            <h1 id="projects-heading" class="h2">Projects</h1>
+        </div>
+
+        <AuthorizeView>
+            <Authorized Context="_">
+                <EditForm Model="_form" OnValidSubmit="AddAsync" FormName="add-project" class="card card-body shadow-sm mb-4">
+                    <DataAnnotationsValidator />
+                    <h2 class="h5">Add a project</h2>
+                    <div class="mb-2">
+                        <label class="form-label" for="project-title">Title</label>
+                        <InputText id="project-title" class="form-control" @bind-Value="_form.Title" />
+                        <ValidationMessage For="() => _form.Title" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="project-description">Description</label>
+                        <InputTextArea id="project-description" class="form-control" @bind-Value="_form.Description" />
+                        <ValidationMessage For="() => _form.Description" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="project-image">Image URL</label>
+                        <InputText id="project-image" class="form-control" @bind-Value="_form.ImageUrl" />
+                        <ValidationMessage For="() => _form.ImageUrl" />
+                    </div>
+                    @if (_addError is not null)
+                    {
+                        <ErrorAlert Message="@_addError" />
+                    }
+                    <div>
+                        <button class="btn btn-primary" type="submit" disabled="@_isSaving">
+                            @(_isSaving ? "Saving…" : "Add project")
+                        </button>
+                    </div>
+                </EditForm>
+            </Authorized>
+            <NotAuthorized>
+                <p class="text-secondary">Sign in to add your own projects.</p>
+            </NotAuthorized>
+        </AuthorizeView>
+
+        @if (_isLoading)
+        {
+            <p role="status">Loading projects…</p>
+        }
+        else if (_errorMessage is not null)
+        {
+            <ErrorAlert Message="@_errorMessage" OnRetry="LoadPageAsync" />
+        }
+        else if (_projects.Count == 0)
+        {
+            <p class="text-secondary">No projects to show yet.</p>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                @foreach (var project in _projects)
+                {
+                    <div class="col" @key="project.Id">
+                        <article class="card h-100 shadow-sm">
+                            @if (!string.IsNullOrWhiteSpace(project.ImageUrl))
+                            {
+                                <img class="card-img-top"
+                                     src="@project.ImageUrl"
+                                     alt=""
+                                     loading="lazy" />
+                            }
+                            <div class="card-body">
+                                <h2 class="card-title h5">@project.Title</h2>
+                                <p class="card-text">@project.Description</p>
+                            </div>
+                        </article>
+                    </div>
+                }
+            </div>
+
+            <nav class="d-flex align-items-center justify-content-between mt-4"
+                 aria-label="Project pages">
+                <button class="btn btn-outline-secondary"
+                        disabled="@(_isLoading || _page <= 1)"
+                        @onclick="PreviousPageAsync">
+                    Previous
+                </button>
+                <span aria-live="polite">Page @_page of @PageCount</span>
+                <button class="btn btn-outline-secondary"
+                        disabled="@(_isLoading || _page >= PageCount)"
+                        @onclick="NextPageAsync">
+                    Next
+                </button>
+            </nav>
+        }
+    </section>
+</main>
+
+@code {
+    private const int PageSize = 25;
+
+    private IReadOnlyList<ProjectDto> _projects = [];
+    private int _page = 1;
+    private int _totalCount;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _addError;
+    private bool _isSaving;
+    private readonly ProjectForm _form = new();
+
+    private sealed class ProjectForm
+    {
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(100)]
+        public string Title { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(500)]
+        public string Description { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string ImageUrl { get; set; } = string.Empty;
+    }
+
+    private async Task AddAsync()
+    {
+        _isSaving = true;
+        _addError = null;
+
+        try
+        {
+            await ProjectService.AddAsync(new CreateProjectRequest(
+                _form.Title.Trim(), _form.Description.Trim(), _form.ImageUrl.Trim()));
+            _form.Title = _form.Description = _form.ImageUrl = string.Empty;
+            await LoadPageAsync();
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to add project.");
+            _addError = ApiErrors.ToMessage(exception, "Unable to add the project.");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling((double)_totalCount / PageSize));
+
+    protected override Task OnInitializedAsync() => LoadPageAsync();
+
+    private async Task LoadPageAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await ProjectService.GetAsync(_page, PageSize);
+            _projects = result.Items;
+            _totalCount = result.TotalCount;
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load projects from the API.");
+            _errorMessage = ApiErrors.ToMessage(exception, "Unable to load projects.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            await LoadPageAsync();
+        }
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_page < PageCount)
+        {
+            _page++;
+            await LoadPageAsync();
+        }
+    }
+}

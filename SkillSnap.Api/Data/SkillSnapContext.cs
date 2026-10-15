@@ -22,6 +22,15 @@ public class SkillSnapContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.HasIndex(user => user.PortfolioUserId).IsUnique();
+            entity.HasOne(user => user.PortfolioUser)
+                .WithMany()
+                .HasForeignKey(user => user.PortfolioUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         builder.Entity<RefreshToken>(entity =>
         {
             entity.HasIndex(token => token.TokenHash).IsUnique();

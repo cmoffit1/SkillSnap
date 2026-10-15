@@ -122,7 +122,7 @@ if (allowedOrigins.Length > 0)
         options.AddPolicy("Frontend", policy =>
             policy.WithOrigins(allowedOrigins)
                 .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .WithHeaders("Authorization", "Content-Type", "X-SkillSnap-Refresh")
+                .WithHeaders("Authorization", "Content-Type", "X-SkillSnap-Refresh", "api-version")
                 .AllowCredentials()));
 }
 

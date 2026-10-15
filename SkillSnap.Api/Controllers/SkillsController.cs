@@ -56,21 +56,17 @@ public class SkillsController(SkillSnapContext db) : ControllerBase
     public async Task<ActionResult<SkillDto>> CreateSkill(
         CreateSkillLineRequest request, CancellationToken ct)
     {
-        var portfolioUserExists = await db.PortfolioUsers
-            .AnyAsync(user => user.Id == request.PortfolioUserId, ct);
-        if (!portfolioUserExists)
+        var owner = await db.GetOrCreateOwnerAsync(User, ct);
+        if (owner is null)
         {
-            ModelState.AddModelError(
-                nameof(request.PortfolioUserId),
-                "The specified portfolio user does not exist.");
-            return ValidationProblem(ModelState);
+            return Unauthorized();
         }
 
         var skill = new Skill
         {
             Name = request.Name,
             Level = request.Level,
-            PortfolioUserId = request.PortfolioUserId
+            PortfolioUser = owner
         };
 
         db.Skills.Add(skill);

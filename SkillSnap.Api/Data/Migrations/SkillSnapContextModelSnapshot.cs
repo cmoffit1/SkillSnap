@@ -197,6 +197,9 @@ namespace SkillSnap.Api.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("PortfolioUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -216,6 +219,10 @@ namespace SkillSnap.Api.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("PortfolioUserId")
+                        .IsUnique()
+                        .HasFilter("[PortfolioUserId] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -390,6 +397,16 @@ namespace SkillSnap.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SkillSnap.Api.Auth.ApplicationUser", b =>
+                {
+                    b.HasOne("SkillSnap.Api.Models.PortfolioUser", "PortfolioUser")
+                        .WithMany()
+                        .HasForeignKey("PortfolioUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PortfolioUser");
                 });
 
             modelBuilder.Entity("SkillSnap.Api.Auth.RefreshToken", b =>

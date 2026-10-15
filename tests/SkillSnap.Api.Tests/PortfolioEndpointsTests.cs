@@ -65,8 +65,7 @@ public sealed class PortfolioEndpointsTests(ApiFactory factory) : IClassFixture<
         {
             Title = "Additional project",
             Description = "Created directly",
-            ImageUrl = "https://example.test/extra.png",
-            PortfolioUserId = portfolioUser.Id
+            ImageUrl = "https://example.test/extra.png"
         });
         Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
         var project = await projectResponse.Content.ReadFromJsonAsync<ProjectDto>();
@@ -75,8 +74,7 @@ public sealed class PortfolioEndpointsTests(ApiFactory factory) : IClassFixture<
         using var skillResponse = await client.PostAsJsonAsync("/api/skills", new
         {
             Name = "C#",
-            Level = "Advanced",
-            PortfolioUserId = portfolioUser.Id
+            Level = "Advanced"
         });
         Assert.Equal(HttpStatusCode.Created, skillResponse.StatusCode);
         var skill = await skillResponse.Content.ReadFromJsonAsync<SkillDto>();
@@ -87,11 +85,66 @@ public sealed class PortfolioEndpointsTests(ApiFactory factory) : IClassFixture<
         var pagedProjects = await pagedProjectsResponse.Content.ReadFromJsonAsync<PagedResult<ProjectDto>>();
         Assert.NotNull(pagedProjects);
         Assert.Single(pagedProjects.Items);
-        Assert.Equal(3, pagedProjects.TotalCount);
+        Assert.True(pagedProjects.TotalCount >= 3);
 
         using var getProjectResponse = await client.GetAsync($"/api/projects/{project.Id}");
         Assert.Equal(HttpStatusCode.OK, getProjectResponse.StatusCode);
         using var getSkillResponse = await client.GetAsync($"/api/skills/{skill.Id}");
         Assert.Equal(HttpStatusCode.OK, getSkillResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Created_items_belong_to_the_callers_own_portfolio()
+    {
+        using var anonymous = CreateClient();
+        using var anonymousPost = await anonymous.PostAsJsonAsync("/api/skills", new { Name = "C#", Level = "Advanced" });
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousPost.StatusCode);
+
+        using var first = await CreateSignedInClientAsync();
+        using var second = await CreateSignedInClientAsync();
+
+        var firstSkill = await AddSkillAsync(first, "First skill");
+        var firstAgain = await AddSkillAsync(first, "First again");
+        var secondSkill = await AddSkillAsync(second, "Second skill");
+
+        Assert.Equal(firstSkill.PortfolioUserId, firstAgain.PortfolioUserId);
+        Assert.NotEqual(firstSkill.PortfolioUserId, secondSkill.PortfolioUserId);
+
+        using var projectResponse = await first.PostAsJsonAsync("/api/projects", new
+        {
+            Title = "Mine",
+            Description = "Owned",
+            ImageUrl = "https://example.test/mine.png"
+        });
+        Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
+        var project = await projectResponse.Content.ReadFromJsonAsync<ProjectDto>();
+        Assert.Equal(firstSkill.PortfolioUserId, project!.PortfolioUserId);
+    }
+
+    private static async Task<SkillDto> AddSkillAsync(HttpClient client, string name)
+    {
+        using var response = await client.PostAsJsonAsync("/api/skills", new { Name = name, Level = "Advanced" });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<SkillDto>())!;
+    }
+
+    private HttpClient CreateClient() => factory.CreateClient(new WebApplicationFactoryClientOptions
+    {
+        BaseAddress = new Uri("https://localhost"),
+        AllowAutoRedirect = false
+    });
+
+    private async Task<HttpClient> CreateSignedInClientAsync()
+    {
+        var client = CreateClient();
+        using var response = await client.PostAsJsonAsync("/auth/register", new
+        {
+            Email = $"owner-{Guid.NewGuid():N}@example.test",
+            Password = "VeryStrong!Password123"
+        });
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+        return client;
     }
 }

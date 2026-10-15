@@ -1,0 +1,181 @@
+@page "/skills"
+@using SkillSnap.Client.Services
+@inject SkillService SkillService
+@inject ILogger<SkillList> Logger
+
+<PageTitle>Skills | SkillSnap</PageTitle>
+
+<main class="container py-4">
+    <section aria-labelledby="skills-heading">
+        <div class="mb-4">
+            <p class="text-uppercase fw-bold text-info mb-1">What I work with</p>
+            <h1 id="skills-heading" class="h2">Skills</h1>
+        </div>
+
+        <AuthorizeView>
+            <Authorized Context="_">
+                <EditForm Model="_form" OnValidSubmit="AddAsync" FormName="add-skill" class="card card-body shadow-sm mb-4">
+                    <DataAnnotationsValidator />
+                    <h2 class="h5">Add a skill</h2>
+                    <div class="mb-2">
+                        <label class="form-label" for="skill-name">Name</label>
+                        <InputText id="skill-name" class="form-control" @bind-Value="_form.Name" />
+                        <ValidationMessage For="() => _form.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="skill-level">Level</label>
+                        <InputText id="skill-level" class="form-control" @bind-Value="_form.Level" placeholder="e.g. Beginner, Advanced" />
+                        <ValidationMessage For="() => _form.Level" />
+                    </div>
+                    @if (_addError is not null)
+                    {
+                        <ErrorAlert Message="@_addError" />
+                    }
+                    <div>
+                        <button class="btn btn-primary" type="submit" disabled="@_isSaving">
+                            @(_isSaving ? "Saving…" : "Add skill")
+                        </button>
+                    </div>
+                </EditForm>
+            </Authorized>
+            <NotAuthorized>
+                <p class="text-secondary">Sign in to add your own skills.</p>
+            </NotAuthorized>
+        </AuthorizeView>
+
+        @if (_isLoading)
+        {
+            <p role="status">Loading skills…</p>
+        }
+        else if (_errorMessage is not null)
+        {
+            <ErrorAlert Message="@_errorMessage" OnRetry="LoadPageAsync" />
+        }
+        else if (_skills.Count == 0)
+        {
+            <p class="text-secondary">No skills to show yet.</p>
+        }
+        else
+        {
+            <ul class="list-unstyled row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+                @foreach (var skill in _skills)
+                {
+                    <li class="col" @key="skill.Id">
+                        <article class="card h-100 shadow-sm">
+                            <div class="card-body d-flex align-items-center justify-content-between gap-3">
+                                <h2 class="card-title h5 mb-0">@skill.Name</h2>
+                                @if (!string.IsNullOrWhiteSpace(skill.Level))
+                                {
+                                    <span class="badge text-bg-info">@skill.Level</span>
+                                }
+                            </div>
+                        </article>
+                    </li>
+                }
+            </ul>
+
+            <nav class="d-flex align-items-center justify-content-between mt-4"
+                 aria-label="Skill pages">
+                <button class="btn btn-outline-secondary"
+                        disabled="@(_isLoading || _page <= 1)"
+                        @onclick="PreviousPageAsync">
+                    Previous
+                </button>
+                <span aria-live="polite">Page @_page of @PageCount</span>
+                <button class="btn btn-outline-secondary"
+                        disabled="@(_isLoading || _page >= PageCount)"
+                        @onclick="NextPageAsync">
+                    Next
+                </button>
+            </nav>
+        }
+    </section>
+</main>
+
+@code {
+    private const int PageSize = 25;
+
+    private IReadOnlyList<SkillDto> _skills = [];
+    private int _page = 1;
+    private int _totalCount;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _addError;
+    private bool _isSaving;
+    private readonly SkillForm _form = new();
+
+    private sealed class SkillForm
+    {
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(100)]
+        public string Name { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(50)]
+        public string Level { get; set; } = string.Empty;
+    }
+
+    private async Task AddAsync()
+    {
+        _isSaving = true;
+        _addError = null;
+
+        try
+        {
+            await SkillService.AddAsync(new CreateSkillRequest(_form.Name.Trim(), _form.Level.Trim()));
+            _form.Name = _form.Level = string.Empty;
+            await LoadPageAsync();
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to add skill.");
+            _addError = ApiErrors.ToMessage(exception, "Unable to add the skill.");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling((double)_totalCount / PageSize));
+
+    protected override Task OnInitializedAsync() => LoadPageAsync();
+
+    private async Task LoadPageAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await SkillService.GetAsync(_page, PageSize);
+            _skills = result.Items;
+            _totalCount = result.TotalCount;
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load skills from the API.");
+            _errorMessage = ApiErrors.ToMessage(exception, "Unable to load skills.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            await LoadPageAsync();
+        }
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (_page < PageCount)
+        {
+            _page++;
+            await LoadPageAsync();
+        }
+    }
+}

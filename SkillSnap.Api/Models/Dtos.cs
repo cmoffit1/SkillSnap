@@ -48,8 +48,7 @@ public record PortfolioUserDto(
 public record CreateProjectRequest(
     [Required, NotWhitespace, StringLength(100)] string Title,
     [Required, NotWhitespace, StringLength(500)] string Description,
-    [Required, NotWhitespace, StringLength(200)] string ImageUrl,
-    [Range(1, int.MaxValue)] int PortfolioUserId);
+    [Required, NotWhitespace, StringLength(200)] string ImageUrl);
 
 /// <summary>
 /// Represents a request to create a new skill line with its name, level, and associated portfolio user ID. 
@@ -59,8 +58,7 @@ public record CreateProjectRequest(
 /// <param name="PortfolioUserId">The ID of the portfolio user associated with the skill line.</param>
 public record CreateSkillLineRequest(
     [Required, NotWhitespace, StringLength(100)] string Name,
-    [Required, NotWhitespace, StringLength(50)] string Level,
-    [Range(1, int.MaxValue)] int PortfolioUserId);
+    [Required, NotWhitespace, StringLength(50)] string Level);
 
 /// <summary>
 /// Represents a project included when creating a portfolio user. The parent ID is assigned by the server.

@@ -56,14 +56,10 @@ public class ProjectsController(SkillSnapContext db) : ControllerBase
     public async Task<ActionResult<ProjectDto>> CreateProject(
         CreateProjectRequest request, CancellationToken ct)
     {
-        var portfolioUserExists = await db.PortfolioUsers
-            .AnyAsync(user => user.Id == request.PortfolioUserId, ct);
-        if (!portfolioUserExists)
+        var owner = await db.GetOrCreateOwnerAsync(User, ct);
+        if (owner is null)
         {
-            ModelState.AddModelError(
-                nameof(request.PortfolioUserId),
-                "The specified portfolio user does not exist.");
-            return ValidationProblem(ModelState);
+            return Unauthorized();
         }
 
         var project = new Project
@@ -71,7 +67,7 @@ public class ProjectsController(SkillSnapContext db) : ControllerBase
             Title = request.Title,
             Description = request.Description,
             ImageUrl = request.ImageUrl,
-            PortfolioUserId = request.PortfolioUserId
+            PortfolioUser = owner
         };
 
         db.Projects.Add(project);

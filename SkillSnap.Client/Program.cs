@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.Authorization;
 using SkillSnap.Client.Auth;
 using SkillSnap.Client;
+using SkillSnap.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -27,10 +28,13 @@ if (!Uri.TryCreate(apiBaseAddress, UriKind.Absolute, out var apiUri) ||
         "ApiBaseAddress must use HTTPS and match the app origin outside Development.");
 }
 
-builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiUri });
+builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiUri, Timeout = TimeSpan.FromSeconds(15) });
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<SkillSnapAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(
     services => services.GetRequiredService<SkillSnapAuthStateProvider>());
+
+builder.Services.AddScoped<SkillService>();
+builder.Services.AddScoped<ProjectService>();
 
 await builder.Build().RunAsync();

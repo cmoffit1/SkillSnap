@@ -1,0 +1,13 @@
+<div class="alert alert-danger" role="alert">
+    <p class="mb-0">@Message</p>
+    @if (OnRetry.HasDelegate)
+    {
+        <button class="btn btn-outline-danger btn-sm mt-2" type="button" @onclick="OnRetry">Try again</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Message { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback OnRetry { get; set; }
+}
