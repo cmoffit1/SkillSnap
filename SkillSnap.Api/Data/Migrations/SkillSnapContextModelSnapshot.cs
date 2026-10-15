@@ -330,10 +330,6 @@ namespace SkillSnap.Api.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Level")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -341,11 +337,66 @@ namespace SkillSnap.Api.Data.Migrations
                     b.Property<int>("PortfolioUserId")
                         .HasColumnType("int");
 
+                    b.Property<int>("SkillLevelId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PortfolioUserId");
 
+                    b.HasIndex("SkillLevelId");
+
                     b.ToTable("Skills");
+                });
+
+            modelBuilder.Entity("SkillSnap.Api.Models.SkillLevel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("SkillLevels");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Beginner",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Intermediate",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Advanced",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Expert",
+                            SortOrder = 4
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -439,7 +490,15 @@ namespace SkillSnap.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SkillSnap.Api.Models.SkillLevel", "SkillLevel")
+                        .WithMany()
+                        .HasForeignKey("SkillLevelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("PortfolioUser");
+
+                    b.Navigation("SkillLevel");
                 });
 
             modelBuilder.Entity("SkillSnap.Api.Models.PortfolioUser", b =>

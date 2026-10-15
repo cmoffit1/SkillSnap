@@ -25,6 +25,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Jwt__Key", "integration-test-signing-key-that-is-at-least-32-bytes");
         SetEnvironmentVariable("Jwt__AccessTokenMinutes", "15");
         SetEnvironmentVariable("Cors__AllowedOrigins__0", "https://localhost:7292");
+        SetEnvironmentVariable("RateLimit__AuthPermitLimit", "1000");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

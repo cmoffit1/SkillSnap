@@ -1,0 +1,196 @@
+@page "/skills/new"
+@page "/skills/{Id:int}/edit"
+@using System.ComponentModel.DataAnnotations
+@using SkillSnap.Client.Services
+@inject SkillService SkillService
+@inject NavigationManager Navigation
+@inject ILogger<SkillEdit> Logger
+
+<PageTitle>@(IsEdit ? "Edit skill" : "Add skill") | SkillSnap</PageTitle>
+
+<main class="container py-4">
+    <a class="btn btn-outline-primary mb-3 @(_isSaving ? "disabled" : null)" href="@BackHref" aria-label="Back"
+       aria-disabled="@(_isSaving ? "true" : null)" tabindex="@(_isSaving ? -1 : null)">
+        <span aria-hidden="true">&larr;</span> Back
+    </a>
+
+    <AuthorizeView Roles="@(IsEdit ? "Admin" : null)">
+        <NotAuthorized>
+            <p class="text-secondary">@(IsEdit ? "Only administrators can edit skills." : "Sign in to add a skill.")</p>
+        </NotAuthorized>
+        <Authorized Context="_">
+            @if (_isLoading)
+            {
+                <p role="status">Loading skill…</p>
+            }
+            else if (_notFound)
+            {
+                <p class="text-secondary">That skill doesn't exist.</p>
+            }
+            else
+            {
+                <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="skill-form" class="card card-body shadow-sm">
+                    <DataAnnotationsValidator />
+                    <fieldset disabled="@_isSaving">
+                        <h1 class="h4">@(IsEdit ? "Edit skill" : "Add a skill")</h1>
+                        <div class="mb-2">
+                            <label class="form-label" for="skill-name">Name</label>
+                            <InputText id="skill-name" class="form-control" @bind-Value="_form.Name" />
+                            <ValidationMessage For="() => _form.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="skill-level">Level</label>
+                            <InputSelect id="skill-level" class="form-select" @bind-Value="_form.SkillLevelId">
+                                <option value="0">Select a level...</option>
+                                @foreach (var level in _levels)
+                                {
+                                    <option value="@level.Id">@level.Name</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _form.SkillLevelId" />
+                        </div>
+                        @if (_error is not null)
+                        {
+                            <ErrorAlert Message="@_error" />
+                        }
+                        @if (_savedMessage is not null)
+                        {
+                            <div class="alert alert-success" role="status">@_savedMessage</div>
+                        }
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">
+                                @(_isSaving ? "Saving…" : "Save")
+                            </button>
+                            <a class="btn btn-outline-secondary @(_isSaving ? "disabled" : null)" href="@BackHref"
+                               aria-disabled="@(_isSaving ? "true" : null)" tabindex="@(_isSaving ? -1 : null)">
+                                @(IsDirty() ? "Cancel" : "Close")
+                            </a>
+                        </div>
+                    </fieldset>
+                </EditForm>
+            }
+        </Authorized>
+    </AuthorizeView>
+</main>
+
+<UnsavedChangesGuard IsDirty="IsDirty" IsBusy="() => _isSaving" />
+
+@code {
+    private (string, int) _initial = (string.Empty, 0);
+
+    private IReadOnlyList<SkillLevelDto> _levels = [];
+
+    private bool IsDirty() => (_form.Name, _form.SkillLevelId) != _initial;
+
+    private string? _savedMessage;
+
+    private readonly SkillForm _form = new();
+    private bool _isLoading;
+    private bool _notFound;
+    private bool _isSaving;
+    private string? _error;
+
+    [Parameter] public int? Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
+
+    private bool IsEdit => Id is not null;
+
+    private string BackHref => IsEdit
+        ? $"skills/{Id}?page={PageParameter ?? 1}"
+        : $"skills?page={PageParameter ?? 1}";
+
+    private sealed class SkillForm
+    {
+        [Required, StringLength(100)] public string Name { get; set; } = string.Empty;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Select a level.")] public int SkillLevelId { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            if (_levels.Count == 0)
+            {
+                _levels = await SkillService.GetLevelsAsync();
+            }
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load skill levels.");
+            _error = ApiErrors.ToMessage(exception, "Unable to load skill levels.");
+            return;
+        }
+
+        if (Id is not { } id)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            var skill = await SkillService.GetByIdAsync(id);
+            if (skill is null)
+            {
+                _notFound = true;
+                return;
+            }
+
+            _form.Name = skill.Name;
+            _form.SkillLevelId = skill.SkillLevelId;
+            _initial = (_form.Name, _form.SkillLevelId);
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load skill {SkillId}.", id);
+            _error = ApiErrors.ToMessage(exception, "Unable to load the skill.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        _savedMessage = null;
+
+        try
+        {
+            var request = new CreateSkillRequest(_form.Name.Trim(), _form.SkillLevelId);
+
+            if (Id is { } id)
+            {
+                var saved = await SkillService.UpdateAsync(id, request);
+                _form.Name = saved.Name;
+                _form.SkillLevelId = saved.SkillLevelId;
+                _initial = (_form.Name, _form.SkillLevelId);
+                _isSaving = false;
+                Navigation.NavigateTo(BackHref);
+                return;
+            }
+            else
+            {
+                await SkillService.AddAsync(request);
+                _form.Name = string.Empty;
+                _form.SkillLevelId = 0;
+                _savedMessage = "Skill added. You can add another or go back.";
+            }
+
+            _initial = (_form.Name, _form.SkillLevelId);
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to save skill.");
+            _error = ApiErrors.ToMessage(exception, "Unable to save the skill.");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

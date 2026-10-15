@@ -8,7 +8,10 @@ public class Skill
     [Key]
     public int Id { get; set; }
     public string Name { get; set; }
-    public string Level { get; set; }
+
+    [ForeignKey(nameof(SkillLevel))]
+    public int SkillLevelId { get; set; }
+    public SkillLevel SkillLevel { get; set; } = null!;
 
     [ForeignKey(nameof(PortfolioUser))]
     public int PortfolioUserId { get; set; }

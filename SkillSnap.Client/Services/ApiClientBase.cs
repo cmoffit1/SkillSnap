@@ -20,6 +20,14 @@ public abstract class ApiClientBase(HttpClient httpClient, SkillSnapAuthStatePro
             ?? throw new ApiException("The server returned an empty response.");
     }
 
+    protected async Task<TResponse> PutAsync<TRequest, TResponse>(
+        string uri, TRequest payload, CancellationToken ct)
+    {
+        using var response = await SendAsync(HttpMethod.Put, uri, JsonContent.Create(payload), ct);
+        return await ReadAsync<TResponse>(response, ct)
+            ?? throw new ApiException("The server returned an empty response.");
+    }
+
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod method, string uri, HttpContent? content, CancellationToken ct)
     {

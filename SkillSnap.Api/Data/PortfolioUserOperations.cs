@@ -44,7 +44,8 @@ public static class PortfolioUserOperations
                 .Select(skill => new SkillRow(
                     skill.Id,
                     skill.Name,
-                    skill.Level,
+                    skill.SkillLevelId,
+                    skill.SkillLevel.Name,
                     skill.PortfolioUserId))
                 .ToList());
 
@@ -67,6 +68,7 @@ public static class PortfolioUserOperations
                 .Select(skill => new SkillDto(
                     skill.Id,
                     skill.Name,
+                    skill.SkillLevelId,
                     skill.Level,
                     skill.PortfolioUserId))
                 .ToList());

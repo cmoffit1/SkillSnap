@@ -17,9 +17,15 @@ public record ProjectDto(int Id, string Title, string Description, string ImageU
 /// </summary>
 /// <param name="Id">The unique identifier of the skill.</param>
 /// <param name="Name">The name of the skill.</param>
-/// <param name="Level">The level of the skill.</param>
+/// <param name="SkillLevelId">The ID of the skill level lookup row.</param>
+/// <param name="Level">The display name of the skill level.</param>
 /// <param name="PortfolioUserId">The ID of the portfolio user associated with the skill.</param>
-public record SkillDto(int Id, string Name, string Level, int PortfolioUserId);
+public record SkillDto(int Id, string Name, int SkillLevelId, string Level, int PortfolioUserId);
+
+/// <summary>A skill level lookup value.</summary>
+/// <param name="Id">The unique identifier of the level.</param>
+/// <param name="Name">The display name of the level.</param>
+public record SkillLevelDto(int Id, string Name);
 
 /// <summary>
 /// Represents a portfolio user with its profile details, projects, and skills.
@@ -48,17 +54,16 @@ public record PortfolioUserDto(
 public record CreateProjectRequest(
     [Required, NotWhitespace, StringLength(100)] string Title,
     [Required, NotWhitespace, StringLength(500)] string Description,
-    [Required, NotWhitespace, StringLength(200)] string ImageUrl);
+    [Required, NotWhitespace, HttpUrl, StringLength(200)] string ImageUrl);
 
 /// <summary>
 /// Represents a request to create a new skill line with its name, level, and associated portfolio user ID. 
 /// </summary>
 /// <param name="Name">The name of the skill line.</param>
-/// <param name="Level">The level of the skill line.</param>
-/// <param name="PortfolioUserId">The ID of the portfolio user associated with the skill line.</param>
+/// <param name="SkillLevelId">The ID of the skill level lookup row.</param>
 public record CreateSkillLineRequest(
     [Required, NotWhitespace, StringLength(100)] string Name,
-    [Required, NotWhitespace, StringLength(50)] string Level);
+    [Range(1, int.MaxValue)] int SkillLevelId);
 
 /// <summary>
 /// Represents a project included when creating a portfolio user. The parent ID is assigned by the server.
@@ -69,16 +74,16 @@ public record CreateSkillLineRequest(
 public record CreatePortfolioProjectRequest(
     [Required, NotWhitespace, StringLength(100)] string Title,
     [Required, NotWhitespace, StringLength(500)] string Description,
-    [Required, NotWhitespace, StringLength(200)] string ImageUrl);
+    [Required, NotWhitespace, HttpUrl, StringLength(200)] string ImageUrl);
 
 /// <summary>
 /// Represents a skill included when creating a portfolio user. The parent ID is assigned by the server.
 /// </summary>
 /// <param name="Name">The skill name.</param>
-/// <param name="Level">The skill level.</param>
+/// <param name="SkillLevelId">The ID of the skill level lookup row.</param>
 public record CreatePortfolioSkillRequest(
     [Required, NotWhitespace, StringLength(100)] string Name,
-    [Required, NotWhitespace, StringLength(50)] string Level);
+    [Range(1, int.MaxValue)] int SkillLevelId);
 
 /// <summary>
 /// Represents a request to create a portfolio user with its profile details, projects, and skills.

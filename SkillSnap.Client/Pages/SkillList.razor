@@ -1,94 +1,86 @@
 @page "/skills"
 @using SkillSnap.Client.Services
+@using SkillSnap.Client.Auth
 @inject SkillService SkillService
+@inject UserState UserState
+@inject NavigationManager Navigation
 @inject ILogger<SkillList> Logger
 
 <PageTitle>Skills | SkillSnap</PageTitle>
 
 <main class="container py-4">
     <section aria-labelledby="skills-heading">
-        <div class="mb-4">
-            <p class="text-uppercase fw-bold text-info mb-1">What I work with</p>
-            <h1 id="skills-heading" class="h2">Skills</h1>
+        <div class="d-flex align-items-end justify-content-between mb-4">
+            <div>
+                <p class="text-uppercase fw-bold text-info mb-1">What I work with</p>
+                <h1 id="skills-heading" class="h2 mb-0">Skills</h1>
+            </div>
+            <AuthorizeView>
+                <Authorized>
+                    <a class="btn btn-primary" href="skills/new?page=@_page">Add skill</a>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <AuthorizeView>
-            <Authorized Context="_">
-                <EditForm Model="_form" OnValidSubmit="AddAsync" FormName="add-skill" class="card card-body shadow-sm mb-4">
-                    <DataAnnotationsValidator />
-                    <h2 class="h5">Add a skill</h2>
-                    <div class="mb-2">
-                        <label class="form-label" for="skill-name">Name</label>
-                        <InputText id="skill-name" class="form-control" @bind-Value="_form.Name" />
-                        <ValidationMessage For="() => _form.Name" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="skill-level">Level</label>
-                        <InputText id="skill-level" class="form-control" @bind-Value="_form.Level" placeholder="e.g. Beginner, Advanced" />
-                        <ValidationMessage For="() => _form.Level" />
-                    </div>
-                    @if (_addError is not null)
-                    {
-                        <ErrorAlert Message="@_addError" />
-                    }
-                    <div>
-                        <button class="btn btn-primary" type="submit" disabled="@_isSaving">
-                            @(_isSaving ? "Saving…" : "Add skill")
-                        </button>
-                    </div>
-                </EditForm>
-            </Authorized>
             <NotAuthorized>
-                <p class="text-secondary">Sign in to add your own skills.</p>
+                <p class="text-secondary">Sign in to view and add skills.</p>
             </NotAuthorized>
-        </AuthorizeView>
-
-        @if (_isLoading)
-        {
-            <p role="status">Loading skills…</p>
-        }
-        else if (_errorMessage is not null)
-        {
-            <ErrorAlert Message="@_errorMessage" OnRetry="LoadPageAsync" />
-        }
-        else if (_skills.Count == 0)
-        {
-            <p class="text-secondary">No skills to show yet.</p>
-        }
-        else
-        {
-            <ul class="list-unstyled row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-                @foreach (var skill in _skills)
+            <Authorized Context="_">
+                <AuthorizeView Roles="Admin" Context="adminView">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="view-all"
+                               checked="@UserState.ViewAll" disabled="@_isLoading"
+                               @onchange="ToggleViewAllAsync" />
+                        <label class="form-check-label" for="view-all">Show everyone's skills</label>
+                    </div>
+                </AuthorizeView>
+                @if (_isLoading)
                 {
-                    <li class="col" @key="skill.Id">
-                        <article class="card h-100 shadow-sm">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                                <h2 class="card-title h5 mb-0">@skill.Name</h2>
+                    <p role="status">Loading skills…</p>
+                }
+                else if (_errorMessage is not null)
+                {
+                    <ErrorAlert Message="@_errorMessage" OnRetry="LoadPageAsync" />
+                }
+                else if (_skills.Count == 0)
+                {
+                    <p class="text-secondary">No skills to show yet.</p>
+                }
+                else
+                {
+                    <div class="list-group list-striped shadow-sm">
+                        @foreach (var skill in _skills)
+                        {
+                            <a class="list-group-item list-group-item-action d-flex align-items-center justify-content-between"
+                               href="skills/@skill.Id?page=@_page"
+                               @key="skill.Id">
+                                <span class="fw-semibold">@skill.Name</span>
                                 @if (!string.IsNullOrWhiteSpace(skill.Level))
                                 {
                                     <span class="badge text-bg-info">@skill.Level</span>
                                 }
-                            </div>
-                        </article>
-                    </li>
-                }
-            </ul>
+                            </a>
+                        }
+                    </div>
 
-            <nav class="d-flex align-items-center justify-content-between mt-4"
-                 aria-label="Skill pages">
-                <button class="btn btn-outline-secondary"
-                        disabled="@(_isLoading || _page <= 1)"
-                        @onclick="PreviousPageAsync">
-                    Previous
-                </button>
-                <span aria-live="polite">Page @_page of @PageCount</span>
-                <button class="btn btn-outline-secondary"
-                        disabled="@(_isLoading || _page >= PageCount)"
-                        @onclick="NextPageAsync">
-                    Next
-                </button>
-            </nav>
-        }
+                    <nav class="d-flex align-items-center justify-content-between mt-4"
+                         aria-label="Skill pages">
+                        <button class="btn btn-outline-secondary"
+                                disabled="@(_isLoading || _page <= 1)"
+                                @onclick="PreviousPage">
+                            Previous
+                        </button>
+                        <span aria-live="polite">Page @_page of @PageCount</span>
+                        <button class="btn btn-outline-secondary"
+                                disabled="@(_isLoading || _page >= PageCount)"
+                                @onclick="NextPage">
+                            Next
+                        </button>
+                    </nav>
+                }
+            </Authorized>
+        </AuthorizeView>
     </section>
 </main>
 
@@ -100,44 +92,16 @@
     private int _totalCount;
     private bool _isLoading = true;
     private string? _errorMessage;
-    private string? _addError;
-    private bool _isSaving;
-    private readonly SkillForm _form = new();
 
-    private sealed class SkillForm
-    {
-        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(100)]
-        public string Name { get; set; } = string.Empty;
-
-        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(50)]
-        public string Level { get; set; } = string.Empty;
-    }
-
-    private async Task AddAsync()
-    {
-        _isSaving = true;
-        _addError = null;
-
-        try
-        {
-            await SkillService.AddAsync(new CreateSkillRequest(_form.Name.Trim(), _form.Level.Trim()));
-            _form.Name = _form.Level = string.Empty;
-            await LoadPageAsync();
-        }
-        catch (HttpRequestException exception)
-        {
-            Logger.LogError(exception, "Failed to add skill.");
-            _addError = ApiErrors.ToMessage(exception, "Unable to add the skill.");
-        }
-        finally
-        {
-            _isSaving = false;
-        }
-    }
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
 
     private int PageCount => Math.Max(1, (int)Math.Ceiling((double)_totalCount / PageSize));
 
-    protected override Task OnInitializedAsync() => LoadPageAsync();
+    protected override Task OnParametersSetAsync()
+    {
+        _page = Math.Max(1, PageParameter ?? 1);
+        return LoadPageAsync();
+    }
 
     private async Task LoadPageAsync()
     {
@@ -146,7 +110,7 @@
 
         try
         {
-            var result = await SkillService.GetAsync(_page, PageSize);
+            var result = await SkillService.GetAsync(_page, PageSize, UserState.ViewAll);
             _skills = result.Items;
             _totalCount = result.TotalCount;
         }
@@ -161,21 +125,20 @@
         }
     }
 
-    private async Task PreviousPageAsync()
+    private async Task ToggleViewAllAsync(ChangeEventArgs args)
     {
-        if (_page > 1)
+        UserState.ViewAll = args.Value is true;
+        if (_page == 1)
         {
-            _page--;
             await LoadPageAsync();
+        }
+        else
+        {
+            Navigation.NavigateTo("skills");
         }
     }
 
-    private async Task NextPageAsync()
-    {
-        if (_page < PageCount)
-        {
-            _page++;
-            await LoadPageAsync();
-        }
-    }
+    private void PreviousPage() => Navigation.NavigateTo($"skills?page={_page - 1}");
+
+    private void NextPage() => Navigation.NavigateTo($"skills?page={_page + 1}");
 }

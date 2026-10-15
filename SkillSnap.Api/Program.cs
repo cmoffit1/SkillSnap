@@ -70,6 +70,8 @@ if (string.IsNullOrWhiteSpace(jwtSettings.Issuer) ||
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ListCache>();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -128,13 +130,14 @@ if (allowedOrigins.Length > 0)
 
 builder.Services.AddRateLimiter(options =>
 {
+    var authPermitLimit = builder.Configuration.GetValue("RateLimit:AuthPermitLimit", 10);
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("auth", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = authPermitLimit,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
                 AutoReplenishment = true

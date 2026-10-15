@@ -1,103 +1,82 @@
 @page "/projects"
 @using SkillSnap.Client.Services
+@using SkillSnap.Client.Auth
 @inject ProjectService ProjectService
+@inject UserState UserState
+@inject NavigationManager Navigation
 @inject ILogger<ProjectList> Logger
 
 <PageTitle>Projects | SkillSnap</PageTitle>
 
 <main class="container py-4">
     <section aria-labelledby="projects-heading">
-        <div class="mb-4">
-            <p class="text-uppercase fw-bold text-info mb-1">Selected work</p>
-            <h1 id="projects-heading" class="h2">Projects</h1>
+        <div class="d-flex align-items-end justify-content-between mb-4">
+            <div>
+                <p class="text-uppercase fw-bold text-info mb-1">Selected work</p>
+                <h1 id="projects-heading" class="h2 mb-0">Projects</h1>
+            </div>
+            <AuthorizeView>
+                <Authorized>
+                    <a class="btn btn-primary" href="projects/new?page=@_page">Add project</a>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <AuthorizeView>
-            <Authorized Context="_">
-                <EditForm Model="_form" OnValidSubmit="AddAsync" FormName="add-project" class="card card-body shadow-sm mb-4">
-                    <DataAnnotationsValidator />
-                    <h2 class="h5">Add a project</h2>
-                    <div class="mb-2">
-                        <label class="form-label" for="project-title">Title</label>
-                        <InputText id="project-title" class="form-control" @bind-Value="_form.Title" />
-                        <ValidationMessage For="() => _form.Title" />
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label" for="project-description">Description</label>
-                        <InputTextArea id="project-description" class="form-control" @bind-Value="_form.Description" />
-                        <ValidationMessage For="() => _form.Description" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="project-image">Image URL</label>
-                        <InputText id="project-image" class="form-control" @bind-Value="_form.ImageUrl" />
-                        <ValidationMessage For="() => _form.ImageUrl" />
-                    </div>
-                    @if (_addError is not null)
-                    {
-                        <ErrorAlert Message="@_addError" />
-                    }
-                    <div>
-                        <button class="btn btn-primary" type="submit" disabled="@_isSaving">
-                            @(_isSaving ? "Saving…" : "Add project")
-                        </button>
-                    </div>
-                </EditForm>
-            </Authorized>
             <NotAuthorized>
-                <p class="text-secondary">Sign in to add your own projects.</p>
+                <p class="text-secondary">Sign in to view and add projects.</p>
             </NotAuthorized>
-        </AuthorizeView>
-
-        @if (_isLoading)
-        {
-            <p role="status">Loading projects…</p>
-        }
-        else if (_errorMessage is not null)
-        {
-            <ErrorAlert Message="@_errorMessage" OnRetry="LoadPageAsync" />
-        }
-        else if (_projects.Count == 0)
-        {
-            <p class="text-secondary">No projects to show yet.</p>
-        }
-        else
-        {
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                @foreach (var project in _projects)
-                {
-                    <div class="col" @key="project.Id">
-                        <article class="card h-100 shadow-sm">
-                            @if (!string.IsNullOrWhiteSpace(project.ImageUrl))
-                            {
-                                <img class="card-img-top"
-                                     src="@project.ImageUrl"
-                                     alt=""
-                                     loading="lazy" />
-                            }
-                            <div class="card-body">
-                                <h2 class="card-title h5">@project.Title</h2>
-                                <p class="card-text">@project.Description</p>
-                            </div>
-                        </article>
+            <Authorized Context="_">
+                <AuthorizeView Roles="Admin" Context="adminView">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="view-all"
+                               checked="@UserState.ViewAll" disabled="@_isLoading"
+                               @onchange="ToggleViewAllAsync" />
+                        <label class="form-check-label" for="view-all">Show everyone's projects</label>
                     </div>
+                </AuthorizeView>
+                @if (_isLoading)
+                {
+                    <p role="status">Loading projects…</p>
                 }
-            </div>
+                else if (_errorMessage is not null)
+                {
+                    <ErrorAlert Message="@_errorMessage" OnRetry="LoadPageAsync" />
+                }
+                else if (_projects.Count == 0)
+                {
+                    <p class="text-secondary">No projects to show yet.</p>
+                }
+                else
+                {
+                    <div class="list-group list-striped shadow-sm">
+                        @foreach (var project in _projects)
+                        {
+                            <a class="list-group-item list-group-item-action"
+                               href="projects/@project.Id?page=@_page"
+                               @key="project.Id">
+                                <span class="fw-semibold">@project.Title</span>
+                            </a>
+                        }
+                    </div>
 
-            <nav class="d-flex align-items-center justify-content-between mt-4"
-                 aria-label="Project pages">
-                <button class="btn btn-outline-secondary"
-                        disabled="@(_isLoading || _page <= 1)"
-                        @onclick="PreviousPageAsync">
-                    Previous
-                </button>
-                <span aria-live="polite">Page @_page of @PageCount</span>
-                <button class="btn btn-outline-secondary"
-                        disabled="@(_isLoading || _page >= PageCount)"
-                        @onclick="NextPageAsync">
-                    Next
-                </button>
-            </nav>
-        }
+                    <nav class="d-flex align-items-center justify-content-between mt-4"
+                         aria-label="Project pages">
+                        <button class="btn btn-outline-secondary"
+                                disabled="@(_isLoading || _page <= 1)"
+                                @onclick="PreviousPage">
+                            Previous
+                        </button>
+                        <span aria-live="polite">Page @_page of @PageCount</span>
+                        <button class="btn btn-outline-secondary"
+                                disabled="@(_isLoading || _page >= PageCount)"
+                                @onclick="NextPage">
+                            Next
+                        </button>
+                    </nav>
+                }
+            </Authorized>
+        </AuthorizeView>
     </section>
 </main>
 
@@ -109,48 +88,16 @@
     private int _totalCount;
     private bool _isLoading = true;
     private string? _errorMessage;
-    private string? _addError;
-    private bool _isSaving;
-    private readonly ProjectForm _form = new();
 
-    private sealed class ProjectForm
-    {
-        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(100)]
-        public string Title { get; set; } = string.Empty;
-
-        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(500)]
-        public string Description { get; set; } = string.Empty;
-
-        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(200)]
-        public string ImageUrl { get; set; } = string.Empty;
-    }
-
-    private async Task AddAsync()
-    {
-        _isSaving = true;
-        _addError = null;
-
-        try
-        {
-            await ProjectService.AddAsync(new CreateProjectRequest(
-                _form.Title.Trim(), _form.Description.Trim(), _form.ImageUrl.Trim()));
-            _form.Title = _form.Description = _form.ImageUrl = string.Empty;
-            await LoadPageAsync();
-        }
-        catch (HttpRequestException exception)
-        {
-            Logger.LogError(exception, "Failed to add project.");
-            _addError = ApiErrors.ToMessage(exception, "Unable to add the project.");
-        }
-        finally
-        {
-            _isSaving = false;
-        }
-    }
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
 
     private int PageCount => Math.Max(1, (int)Math.Ceiling((double)_totalCount / PageSize));
 
-    protected override Task OnInitializedAsync() => LoadPageAsync();
+    protected override Task OnParametersSetAsync()
+    {
+        _page = Math.Max(1, PageParameter ?? 1);
+        return LoadPageAsync();
+    }
 
     private async Task LoadPageAsync()
     {
@@ -159,7 +106,7 @@
 
         try
         {
-            var result = await ProjectService.GetAsync(_page, PageSize);
+            var result = await ProjectService.GetAsync(_page, PageSize, UserState.ViewAll);
             _projects = result.Items;
             _totalCount = result.TotalCount;
         }
@@ -174,21 +121,20 @@
         }
     }
 
-    private async Task PreviousPageAsync()
+    private async Task ToggleViewAllAsync(ChangeEventArgs args)
     {
-        if (_page > 1)
+        UserState.ViewAll = args.Value is true;
+        if (_page == 1)
         {
-            _page--;
             await LoadPageAsync();
+        }
+        else
+        {
+            Navigation.NavigateTo("projects");
         }
     }
 
-    private async Task NextPageAsync()
-    {
-        if (_page < PageCount)
-        {
-            _page++;
-            await LoadPageAsync();
-        }
-    }
+    private void PreviousPage() => Navigation.NavigateTo($"projects?page={_page - 1}");
+
+    private void NextPage() => Navigation.NavigateTo($"projects?page={_page + 1}");
 }

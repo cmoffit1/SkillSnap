@@ -1,0 +1,26 @@
+@inject IJSRuntime JS
+
+<NavigationLock OnBeforeInternalNavigation="ConfirmLeaveAsync" ConfirmExternalNavigation="@(IsDirty?.Invoke() == true)" />
+
+@code {
+    // Evaluated when navigation happens, so it never sees a stale value.
+    [Parameter] public Func<bool>? IsDirty { get; set; }
+
+    [Parameter] public Func<bool>? IsBusy { get; set; }
+
+    [Parameter] public string Message { get; set; } = "You will lose your changes. Leave this page?";
+
+    private async Task ConfirmLeaveAsync(LocationChangingContext context)
+    {
+        if (IsBusy?.Invoke() == true)
+        {
+            context.PreventNavigation();
+            return;
+        }
+
+        if (IsDirty?.Invoke() == true && !await JS.InvokeAsync<bool>("confirm", Message))
+        {
+            context.PreventNavigation();
+        }
+    }
+}

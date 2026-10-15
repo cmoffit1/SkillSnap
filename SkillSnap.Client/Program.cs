@@ -34,6 +34,8 @@ builder.Services.AddScoped<SkillSnapAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(
     services => services.GetRequiredService<SkillSnapAuthStateProvider>());
 
+builder.Services.AddScoped<UserState>();
+
 builder.Services.AddScoped<SkillService>();
 builder.Services.AddScoped<ProjectService>();
 

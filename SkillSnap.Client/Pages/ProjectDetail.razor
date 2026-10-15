@@ -1,0 +1,101 @@
+@page "/projects/{Id:int}"
+@using SkillSnap.Client.Services
+@inject ProjectService ProjectService
+@inject ILogger<ProjectDetail> Logger
+
+<PageTitle>@(_project?.Title ?? "Project") | SkillSnap</PageTitle>
+
+<main class="container py-4">
+    <a class="btn btn-outline-primary mb-3" href="projects?page=@(PageParameter ?? 1)" aria-label="Back to projects">
+        <span aria-hidden="true">&larr;</span> Back
+    </a>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <p class="text-secondary">Sign in to view this project.</p>
+        </NotAuthorized>
+        <Authorized Context="_">
+            @if (_isLoading)
+            {
+                <p role="status">Loading project…</p>
+            }
+            else if (_errorMessage is not null)
+            {
+                <ErrorAlert Message="@_errorMessage" OnRetry="LoadAsync" />
+            }
+            else if (_project is null)
+            {
+                <p class="text-secondary">That project doesn't exist.</p>
+            }
+            else
+            {
+                <article class="card shadow-sm">
+                    @if (!string.IsNullOrWhiteSpace(_project.ImageUrl))
+                    {
+                        <img class="card-img-top" src="@_project.ImageUrl" alt="" />
+                    }
+                    <div class="card-body">
+                        <h1 class="card-title h3">@_project.Title</h1>
+                        <p class="card-text">@_project.Description</p>
+                        @if (!string.IsNullOrWhiteSpace(_project.ImageUrl))
+                        {
+                            <p class="card-text mb-0">
+                                @if (SafeUrl(_project.ImageUrl) is { } url)
+                                {
+                                    <a href="@url" target="_blank" rel="noopener noreferrer">@_project.ImageUrl</a>
+                                }
+                                else
+                                {
+                                    @_project.ImageUrl
+                                }
+                            </p>
+                        }
+                    </div>
+                </article>
+
+                <AuthorizeView Roles="Admin">
+                    <a class="btn btn-outline-primary mt-3" href="projects/@Id/edit?page=@(PageParameter ?? 1)">Edit</a>
+                </AuthorizeView>
+            }
+        </Authorized>
+    </AuthorizeView>
+</main>
+
+@code {
+    private ProjectDto? _project;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    [Parameter] public int Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    // Only http(s) URLs become links, so a stored javascript: URL can't run.
+    private static string? SafeUrl(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            ? uri.AbsoluteUri
+            : null;
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _project = await ProjectService.GetByIdAsync(Id);
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load project {ProjectId}.", Id);
+            _errorMessage = ApiErrors.ToMessage(exception, "Unable to load the project.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

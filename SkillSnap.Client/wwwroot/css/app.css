@@ -6,6 +6,19 @@ h1:focus {
     outline: none;
 }
 
+/* Shades every second row; setting the variable keeps the row hover highlight working. */
+.list-striped > .list-group-item:nth-child(even) {
+    --bs-list-group-bg: var(--bs-secondary-bg);
+}
+
+/* Hover/keyboard focus must stand out from both the plain and shaded rows. */
+.list-striped > .list-group-item-action:hover,
+.list-striped > .list-group-item-action:focus-visible {
+    --bs-list-group-action-hover-bg: var(--bs-primary-bg-subtle);
+    background-color: var(--bs-primary-bg-subtle);
+    box-shadow: inset 4px 0 0 var(--bs-primary);
+}
+
 a, .btn-link {
     color: #0071c1;
 }

@@ -1,0 +1,80 @@
+@page "/skills/{Id:int}"
+@using SkillSnap.Client.Services
+@inject SkillService SkillService
+@inject ILogger<SkillDetail> Logger
+
+<PageTitle>@(_skill?.Name ?? "Skill") | SkillSnap</PageTitle>
+
+<main class="container py-4">
+    <a class="btn btn-outline-primary mb-3" href="skills?page=@(PageParameter ?? 1)" aria-label="Back to skills">
+        <span aria-hidden="true">&larr;</span> Back
+    </a>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <p class="text-secondary">Sign in to view this skill.</p>
+        </NotAuthorized>
+        <Authorized Context="_">
+            @if (_isLoading)
+            {
+                <p role="status">Loading skill…</p>
+            }
+            else if (_errorMessage is not null)
+            {
+                <ErrorAlert Message="@_errorMessage" OnRetry="LoadAsync" />
+            }
+            else if (_skill is null)
+            {
+                <p class="text-secondary">That skill doesn't exist.</p>
+            }
+            else
+            {
+                <article class="card shadow-sm">
+                    <div class="card-body">
+                        <h1 class="card-title h3">@_skill.Name</h1>
+                        @if (!string.IsNullOrWhiteSpace(_skill.Level))
+                        {
+                            <span class="badge text-bg-info">@_skill.Level</span>
+                        }
+                    </div>
+                </article>
+
+                <AuthorizeView Roles="Admin">
+                    <a class="btn btn-outline-primary mt-3" href="skills/@Id/edit?page=@(PageParameter ?? 1)">Edit</a>
+                </AuthorizeView>
+            }
+        </Authorized>
+    </AuthorizeView>
+</main>
+
+@code {
+    private SkillDto? _skill;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    [Parameter] public int Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _skill = await SkillService.GetByIdAsync(Id);
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load skill {SkillId}.", Id);
+            _errorMessage = ApiErrors.ToMessage(exception, "Unable to load the skill.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

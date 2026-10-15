@@ -1,11 +1,39 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using SkillSnap.Api.Auth;
 using SkillSnap.Api.Models;
 
 namespace SkillSnap.Api.Data;
 
 public static class PortfolioOwnership
 {
+    /// <summary>
+    /// Decides whose records the caller may read. Returns null for everyone's records, which only
+    /// admins who ask for them get. Otherwise returns the caller's portfolio ID, or 0 (matches
+    /// nothing) when the caller has no portfolio yet.
+    /// </summary>
+    public static async Task<int?> GetVisibleOwnerIdAsync(
+        this SkillSnapContext db, ClaimsPrincipal principal, bool all, CancellationToken ct)
+    {
+        if (all && principal.IsInRole(Roles.Admin))
+        {
+            return null;
+        }
+
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                     principal.FindFirstValue("sub");
+        if (userId is null)
+        {
+            return 0;
+        }
+
+        return await db.Users
+                   .AsNoTracking()
+                   .Where(user => user.Id == userId)
+                   .Select(user => user.PortfolioUserId)
+                   .FirstOrDefaultAsync(ct) ?? 0;
+    }
+
     /// <summary>
     /// Returns the caller's portfolio, creating and linking an empty one on first use.
     /// Changes are tracked but not saved, so the caller commits them with the new project or skill.

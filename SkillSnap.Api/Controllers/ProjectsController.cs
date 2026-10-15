@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using SkillSnap.Api.Auth;
 using Microsoft.AspNetCore.Mvc;
 using SkillSnap.Api.Models;
 using SkillSnap.Api.Data;
@@ -9,29 +10,39 @@ namespace SkillSnap.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class ProjectsController(SkillSnapContext db) : ControllerBase
+public class ProjectsController(SkillSnapContext db, ListCache cache) : ControllerBase
 {
     [ProducesResponseType<PagedResult<ProjectDto>>(200)]
     [HttpGet(Name = "GetProjects")]
     public async Task<ActionResult<PagedResult<ProjectDto>>> GetProjects(
-        int? page, int? pageSize, CancellationToken ct)
+        int? page, int? pageSize, bool all, CancellationToken ct)
     {
         var (p, size) = PagedResult<ProjectDto>.Normalize(page, pageSize);
-        var total = await db.Projects.CountAsync(ct);
+        var owner = await db.GetVisibleOwnerIdAsync(User, all, ct);
 
-        var rows = await db.Projects
-            .AsNoTracking()
-            .OrderBy(project => project.Id)
-            .Skip((p - 1) * size)
-            .Take(size)
-            .Select(ProjectDtoOperations.ToRow)
-            .ToListAsync(ct);
+        return await cache.GetOrCreateAsync(CacheSets.Projects, owner?.ToString() ?? "all", p, size, async () =>
+        {
+            var query = db.Projects.AsNoTracking();
+            if (owner is { } ownerId)
+            {
+                query = query.Where(project => project.PortfolioUserId == ownerId);
+            }
 
-        return new PagedResult<ProjectDto>(
-            rows.Select(ProjectDtoOperations.ToDto).ToList(),
-            p,
-            size,
-            total);
+            var total = await query.CountAsync(ct);
+
+            var rows = await query
+                .OrderBy(project => project.Id)
+                .Skip((p - 1) * size)
+                .Take(size)
+                .Select(ProjectDtoOperations.ToRow)
+                .ToListAsync(ct);
+
+            return new PagedResult<ProjectDto>(
+                rows.Select(ProjectDtoOperations.ToDto).ToList(),
+                p,
+                size,
+                total);
+        });
     }
 
     [ProducesResponseType<ProjectDto>(200)]
@@ -39,9 +50,14 @@ public class ProjectsController(SkillSnapContext db) : ControllerBase
     [HttpGet("{id}", Name = "GetProject")]
     public async Task<ActionResult<ProjectDto>> GetProjectById(int id, CancellationToken ct)
     {
-        var row = await db.Projects
-            .AsNoTracking()
-            .Where(project => project.Id == id)
+        var owner = await db.GetVisibleOwnerIdAsync(User, all: true, ct);
+        var query = db.Projects.AsNoTracking().Where(project => project.Id == id);
+        if (owner is { } ownerId)
+        {
+            query = query.Where(project => project.PortfolioUserId == ownerId);
+        }
+
+        var row = await query
             .Select(ProjectDtoOperations.ToRow)
             .FirstOrDefaultAsync(ct);
 
@@ -72,14 +88,35 @@ public class ProjectsController(SkillSnapContext db) : ControllerBase
 
         db.Projects.Add(project);
         await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Projects);
 
-        var row = await db.Projects
-            .AsNoTracking()
-            .Where(savedProject => savedProject.Id == project.Id)
-            .Select(ProjectDtoOperations.ToRow)
-            .SingleAsync(ct);
-        var dto = ProjectDtoOperations.ToDto(row);
+        var dto = new ProjectDto(
+            project.Id, project.Title, project.Description, project.ImageUrl, project.PortfolioUserId);
 
         return CreatedAtRoute("GetProject", new { id = dto.Id }, dto);
+    }
+
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType<ProjectDto>(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [HttpPut("{id:int}", Name = "UpdateProject")]
+    public async Task<ActionResult<ProjectDto>> UpdateProject(
+        int id, CreateProjectRequest request, CancellationToken ct)
+    {
+        var project = await db.Projects.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        project.Title = request.Title;
+        project.Description = request.Description;
+        project.ImageUrl = request.ImageUrl;
+        await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Projects);
+
+        return new ProjectDto(
+            project.Id, project.Title, project.Description, project.ImageUrl, project.PortfolioUserId);
     }
 }

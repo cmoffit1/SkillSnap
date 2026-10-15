@@ -9,7 +9,7 @@ namespace SkillSnap.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class PortfolioUserController(SkillSnapContext db) : ControllerBase
+public class PortfolioUserController(SkillSnapContext db, ListCache cache) : ControllerBase
 {
     [ProducesResponseType<PagedResult<PortfolioUserDto>>(200)]
     [HttpGet(Name = "GetPortfolioUsers")]
@@ -21,6 +21,7 @@ public class PortfolioUserController(SkillSnapContext db) : ControllerBase
 
         var rows = await db.PortfolioUsers
             .AsNoTracking()
+            .AsSplitQuery()
             .OrderBy(u => u.Id)
             .Skip((p - 1) * size)
             .Take(size)
@@ -37,6 +38,7 @@ public class PortfolioUserController(SkillSnapContext db) : ControllerBase
     {
         var row = await db.PortfolioUsers
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(user => user.Id == id)
             .Select(PortfolioUserOperations.ToRow)
             .FirstOrDefaultAsync(ct);
@@ -51,6 +53,16 @@ public class PortfolioUserController(SkillSnapContext db) : ControllerBase
     public async Task<ActionResult<PortfolioUserDto>> Create(
         CreatePortfolioUserRequest request, CancellationToken ct)
     {
+        var levelIds = request.Skills.Select(skill => skill.SkillLevelId).Distinct().ToList();
+        var knownLevels = await db.SkillLevels.CountAsync(level => levelIds.Contains(level.Id), ct);
+        if (knownLevels != levelIds.Count)
+        {
+            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["Skills"] = ["Unknown skill level."]
+            }));
+        }
+
         var user = new PortfolioUser
         {
             Name = request.Name,
@@ -68,16 +80,19 @@ public class PortfolioUserController(SkillSnapContext db) : ControllerBase
                 .Select(skill => new Skill
                 {
                     Name = skill.Name,
-                    Level = skill.Level
+                    SkillLevelId = skill.SkillLevelId
                 })
                 .ToList()
         };
 
         db.PortfolioUsers.Add(user);
         await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Projects);
+        cache.Invalidate(CacheSets.Skills);
 
         var row = await db.PortfolioUsers
             .AsNoTracking()
+            .AsSplitQuery()
             .Where(savedUser => savedUser.Id == user.Id)
             .Select(PortfolioUserOperations.ToRow)
             .SingleAsync(ct);

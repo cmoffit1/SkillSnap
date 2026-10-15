@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using SkillSnap.Api.Auth;
 using SkillSnap.Api.Data;
 using SkillSnap.Api.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -9,29 +10,39 @@ namespace SkillSnap.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/[controller]")]
-public class SkillsController(SkillSnapContext db) : ControllerBase
+public class SkillsController(SkillSnapContext db, ListCache cache) : ControllerBase
 {
     [ProducesResponseType<PagedResult<SkillDto>>(200)]
     [HttpGet(Name = "GetSkills")]
     public async Task<ActionResult<PagedResult<SkillDto>>> GetSkills(
-        int? page, int? pageSize, CancellationToken ct)
+        int? page, int? pageSize, bool all, CancellationToken ct)
     {
         var (p, size) = PagedResult<SkillDto>.Normalize(page, pageSize);
-        var total = await db.Skills.CountAsync(ct);
+        var owner = await db.GetVisibleOwnerIdAsync(User, all, ct);
 
-        var rows = await db.Skills
-            .AsNoTracking()
-            .OrderBy(skill => skill.Id)
-            .Skip((p - 1) * size)
-            .Take(size)
-            .Select(SkillDtoOperations.ToRow)
-            .ToListAsync(ct);
+        return await cache.GetOrCreateAsync(CacheSets.Skills, owner?.ToString() ?? "all", p, size, async () =>
+        {
+            var query = db.Skills.AsNoTracking();
+            if (owner is { } ownerId)
+            {
+                query = query.Where(skill => skill.PortfolioUserId == ownerId);
+            }
 
-        return new PagedResult<SkillDto>(
-            rows.Select(SkillDtoOperations.ToDto).ToList(),
-            p,
-            size,
-            total);
+            var total = await query.CountAsync(ct);
+
+            var rows = await query
+                .OrderBy(skill => skill.Id)
+                .Skip((p - 1) * size)
+                .Take(size)
+                .Select(SkillDtoOperations.ToRow)
+                .ToListAsync(ct);
+
+            return new PagedResult<SkillDto>(
+                rows.Select(SkillDtoOperations.ToDto).ToList(),
+                p,
+                size,
+                total);
+        });
     }
 
     [ProducesResponseType<SkillDto>(200)]
@@ -39,9 +50,14 @@ public class SkillsController(SkillSnapContext db) : ControllerBase
     [HttpGet("{id}", Name = "GetSkill")]
     public async Task<ActionResult<SkillDto>> GetSkillById(int id, CancellationToken ct)
     {
-        var row = await db.Skills
-            .AsNoTracking()
-            .Where(skill => skill.Id == id)
+        var owner = await db.GetVisibleOwnerIdAsync(User, all: true, ct);
+        var query = db.Skills.AsNoTracking().Where(skill => skill.Id == id);
+        if (owner is { } ownerId)
+        {
+            query = query.Where(skill => skill.PortfolioUserId == ownerId);
+        }
+
+        var row = await query
             .Select(SkillDtoOperations.ToRow)
             .FirstOrDefaultAsync(ct);
 
@@ -62,23 +78,66 @@ public class SkillsController(SkillSnapContext db) : ControllerBase
             return Unauthorized();
         }
 
+        var levelName = await FindLevelNameAsync(request.SkillLevelId, ct);
+        if (levelName is null)
+        {
+            return InvalidLevel();
+        }
+
         var skill = new Skill
         {
             Name = request.Name,
-            Level = request.Level,
+            SkillLevelId = request.SkillLevelId,
             PortfolioUser = owner
         };
 
         db.Skills.Add(skill);
         await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Skills);
 
-        var row = await db.Skills
-            .AsNoTracking()
-            .Where(savedSkill => savedSkill.Id == skill.Id)
-            .Select(SkillDtoOperations.ToRow)
-            .SingleAsync(ct);
-        var dto = SkillDtoOperations.ToDto(row);
+        var dto = new SkillDto(skill.Id, skill.Name, skill.SkillLevelId, levelName, skill.PortfolioUserId);
 
         return CreatedAtRoute("GetSkill", new { id = dto.Id }, dto);
     }
+
+    [Authorize(Roles = Roles.Admin)]
+    [ProducesResponseType<SkillDto>(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [HttpPut("{id:int}", Name = "UpdateSkill")]
+    public async Task<ActionResult<SkillDto>> UpdateSkill(
+        int id, CreateSkillLineRequest request, CancellationToken ct)
+    {
+        var skill = await db.Skills.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (skill is null)
+        {
+            return NotFound();
+        }
+
+        var levelName = await FindLevelNameAsync(request.SkillLevelId, ct);
+        if (levelName is null)
+        {
+            return InvalidLevel();
+        }
+
+        skill.Name = request.Name;
+        skill.SkillLevelId = request.SkillLevelId;
+        await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Skills);
+
+        return new SkillDto(skill.Id, skill.Name, skill.SkillLevelId, levelName, skill.PortfolioUserId);
+    }
+
+    private Task<string?> FindLevelNameAsync(int levelId, CancellationToken ct) =>
+        db.SkillLevels
+            .AsNoTracking()
+            .Where(level => level.Id == levelId)
+            .Select(level => (string?)level.Name)
+            .FirstOrDefaultAsync(ct);
+
+    private ActionResult InvalidLevel() =>
+        ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
+        {
+            ["SkillLevelId"] = ["Unknown skill level."]
+        }));
 }

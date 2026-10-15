@@ -3,13 +3,14 @@
 @using SkillSnap.Client.Auth
 @using Microsoft.AspNetCore.Components.Authorization
 @inject SkillSnapAuthStateProvider AuthProvider
+@inject UserState UserState
 
 <PageTitle>Account | SkillSnap</PageTitle>
 
 <main class="account-page">
     <section class="account-panel">
         <AuthorizeView>
-            <Authorized Context="authState">
+            <Authorized Context="_">
                 <p class="eyebrow">ASP.NET Core Identity</p>
                 <h1>Your account</h1>
                 <p class="intro">You are signed in with your SkillSnap account.</p>
@@ -17,16 +18,16 @@
                 <dl class="identity-details">
                     <div>
                         <dt>Email</dt>
-                        <dd>@authState.User.Identity?.Name</dd>
+                        <dd>@UserState.Current?.Email</dd>
                     </div>
                     <div>
                         <dt>Identity user ID</dt>
-                        <dd class="user-id">@authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value</dd>
+                        <dd class="user-id">@UserState.Current?.UserId</dd>
                     </div>
                     <div>
                         <dt>Roles</dt>
                         <dd>
-                            @foreach (var role in authState.User.FindAll(ClaimTypes.Role).Select(claim => claim.Value))
+                            @foreach (var role in UserState.Current?.Roles ?? [])
                             {
                                 <span class="role-tag">@role</span>
                             }

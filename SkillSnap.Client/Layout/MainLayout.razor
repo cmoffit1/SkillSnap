@@ -1,4 +1,8 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@using SkillSnap.Client.Auth
+@implements IDisposable
+@inject UserState User
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -6,6 +10,20 @@
 
     <main>
         <div class="top-row px-4">
+            @if (User.Current is { } user)
+            {
+                <span class="me-3" aria-live="polite">
+                    Signed in as <strong>@user.Email</strong>
+                    @if (User.IsAdmin)
+                    {
+                        <span class="badge text-bg-primary ms-1">Admin</span>
+                    }
+                </span>
+            }
+            else
+            {
+                <a class="me-3" href="account">Sign in</a>
+            }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -21,3 +39,15 @@
         </article>
     </main>
 </div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        User.Changed += OnUserChanged;
+        await User.InitializeAsync();
+    }
+
+    private void OnUserChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => User.Changed -= OnUserChanged;
+}

@@ -1,0 +1,184 @@
+@page "/projects/new"
+@page "/projects/{Id:int}/edit"
+@using System.ComponentModel.DataAnnotations
+@using SkillSnap.Client.Components
+@using SkillSnap.Client.Services
+@inject ProjectService ProjectService
+@inject NavigationManager Navigation
+@inject ILogger<ProjectEdit> Logger
+
+<PageTitle>@(IsEdit ? "Edit project" : "Add project") | SkillSnap</PageTitle>
+
+<main class="container py-4">
+    <a class="btn btn-outline-primary mb-3 @(_isSaving ? "disabled" : null)" href="@BackHref" aria-label="Back"
+       aria-disabled="@(_isSaving ? "true" : null)" tabindex="@(_isSaving ? -1 : null)">
+        <span aria-hidden="true">&larr;</span> Back
+    </a>
+
+    <AuthorizeView Roles="@(IsEdit ? "Admin" : null)">
+        <NotAuthorized>
+            <p class="text-secondary">@(IsEdit ? "Only administrators can edit projects." : "Sign in to add a project.")</p>
+        </NotAuthorized>
+        <Authorized Context="_">
+            @if (_isLoading)
+            {
+                <p role="status">Loading project…</p>
+            }
+            else if (_notFound)
+            {
+                <p class="text-secondary">That project doesn't exist.</p>
+            }
+            else
+            {
+                <EditForm Model="_form" OnValidSubmit="SaveAsync" FormName="project-form" class="card card-body shadow-sm">
+                    <DataAnnotationsValidator />
+                    <fieldset disabled="@_isSaving">
+                        <h1 class="h4">@(IsEdit ? "Edit project" : "Add a project")</h1>
+                        <div class="mb-2">
+                            <label class="form-label" for="project-title">Title</label>
+                            <InputText id="project-title" class="form-control" @bind-Value="_form.Title" />
+                            <ValidationMessage For="() => _form.Title" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="project-description">Description</label>
+                            <InputTextArea id="project-description" class="form-control" @bind-Value="_form.Description" />
+                            <ValidationMessage For="() => _form.Description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="project-image">Image URL</label>
+                            <InputText id="project-image" class="form-control" @bind-Value="_form.ImageUrl" />
+                            <ValidationMessage For="() => _form.ImageUrl" />
+                        </div>
+                        @if (_error is not null)
+                        {
+                            <ErrorAlert Message="@_error" />
+                        }
+                        @if (_savedMessage is not null)
+                        {
+                            <div class="alert alert-success" role="status">@_savedMessage</div>
+                        }
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" type="submit">
+                                @(_isSaving ? "Saving…" : "Save")
+                            </button>
+                            <a class="btn btn-outline-secondary @(_isSaving ? "disabled" : null)" href="@BackHref"
+                               aria-disabled="@(_isSaving ? "true" : null)" tabindex="@(_isSaving ? -1 : null)">
+                                @(IsDirty() ? "Cancel" : "Close")
+                            </a>
+                        </div>
+                    </fieldset>
+                </EditForm>
+            }
+        </Authorized>
+    </AuthorizeView>
+</main>
+
+<UnsavedChangesGuard IsDirty="IsDirty" IsBusy="() => _isSaving" />
+
+@code {
+    private (string, string, string) _initial = (string.Empty, string.Empty, string.Empty);
+
+    private bool IsDirty() => (_form.Title, _form.Description, _form.ImageUrl) != _initial;
+
+    private string? _savedMessage;
+
+    private readonly ProjectForm _form = new();
+    private bool _isLoading;
+    private bool _notFound;
+    private bool _isSaving;
+    private string? _error;
+
+    [Parameter] public int? Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")] public int? PageParameter { get; set; }
+
+    private bool IsEdit => Id is not null;
+
+    private string BackHref => IsEdit
+        ? $"projects/{Id}?page={PageParameter ?? 1}"
+        : $"projects?page={PageParameter ?? 1}";
+
+    private sealed class ProjectForm
+    {
+        [Required, StringLength(100)] public string Title { get; set; } = string.Empty;
+
+        [Required, StringLength(500)] public string Description { get; set; } = string.Empty;
+
+        [Required, HttpUrl, StringLength(200)] public string ImageUrl { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is not { } id)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            var project = await ProjectService.GetByIdAsync(id);
+            if (project is null)
+            {
+                _notFound = true;
+                return;
+            }
+
+            _form.Title = project.Title;
+            _form.Description = project.Description;
+            _form.ImageUrl = project.ImageUrl;
+            _initial = (_form.Title, _form.Description, _form.ImageUrl);
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to load project {ProjectId}.", id);
+            _error = ApiErrors.ToMessage(exception, "Unable to load the project.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _error = null;
+        _savedMessage = null;
+
+        try
+        {
+            var request = new CreateProjectRequest(
+                _form.Title.Trim(), _form.Description.Trim(), _form.ImageUrl.Trim());
+
+            if (Id is { } id)
+            {
+                var saved = await ProjectService.UpdateAsync(id, request);
+                _form.Title = saved.Title;
+                _form.Description = saved.Description;
+                _form.ImageUrl = saved.ImageUrl;
+                _initial = (_form.Title, _form.Description, _form.ImageUrl);
+                _isSaving = false;
+                Navigation.NavigateTo(BackHref);
+                return;
+            }
+            else
+            {
+                await ProjectService.AddAsync(request);
+                _form.Title = _form.Description = _form.ImageUrl = string.Empty;
+                _savedMessage = "Project added. You can add another or go back.";
+            }
+
+            _initial = (_form.Title, _form.Description, _form.ImageUrl);
+        }
+        catch (HttpRequestException exception)
+        {
+            Logger.LogError(exception, "Failed to save project.");
+            _error = ApiErrors.ToMessage(exception, "Unable to save the project.");
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

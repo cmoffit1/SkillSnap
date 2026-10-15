@@ -1,44 +1,49 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SkillSnap.Api.Models;
+using Microsoft.EntityFrameworkCore;
+using SkillSnap.Api.Auth;
 using SkillSnap.Api.Data;
+using SkillSnap.Api.Models;
 
-namespace SkillSnap.Api.Controllers
+namespace SkillSnap.Api.Controllers;
+
+[ApiController]
+[Authorize(Roles = Roles.Admin)]
+[Route("api/[controller]")]
+public class SeedController(SkillSnapContext db, ListCache cache) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class SeedController : ControllerBase
+    [ProducesResponseType<string>(200)]
+    [ProducesResponseType(400)]
+    [HttpPost(Name = "SeedSampleData")]
+    public async Task<IActionResult> Seed(CancellationToken ct)
     {
-        private readonly SkillSnapContext _context;
-        public SeedController(SkillSnapContext context)
+        if (await db.PortfolioUsers.AnyAsync(ct))
         {
-            _context = context;
+            return BadRequest("Sample data already exists.");
         }
-        [HttpPost]
-        public IActionResult Seed()
+
+        var user = new PortfolioUser
         {
-            if (_context.PortfolioUsers.Any())
-            {
-                return BadRequest("Sample data already exists.");
-            }
-            var user = new PortfolioUser
-            {
-                Name = "Jordan Developer",
-                Bio = "Full-stack developer passionate about learning new tech.",
-                ProfileImageUrl = "https://example.com/images/jordan.png",
-                Projects = new List<Project>
-                {
-                    new Project { Title = "Task Tracker", Description = "Manage tasks effectively", ImageUrl = "https://example.com/images/task.png" },
-                    new Project { Title = "Weather App", Description = "Forecast weather using APIs", ImageUrl = "https://example.com/images/weather.png" }
-                },
-                Skills = new List<Skill>
-                {
-                    new Skill { Name = "C#", Level = "Advanced" },
-                    new Skill { Name = "Blazor", Level = "Intermediate" }
-                }
-            };
-            _context.PortfolioUsers.Add(user);
-            _context.SaveChanges();
-            return Ok("Sample data inserted.");
-        }
+            Name = "Jordan Developer",
+            Bio = "Full-stack developer passionate about learning new tech.",
+            ProfileImageUrl = "https://example.com/images/jordan.png",
+            Projects =
+            [
+                new Project { Title = "Task Tracker", Description = "Manage tasks effectively", ImageUrl = "https://example.com/images/task.png" },
+                new Project { Title = "Weather App", Description = "Forecast weather using APIs", ImageUrl = "https://example.com/images/weather.png" }
+            ],
+            Skills =
+            [
+                new Skill { Name = "C#", SkillLevelId = 3 },
+                new Skill { Name = "Blazor", SkillLevelId = 2 }
+            ]
+        };
+
+        db.PortfolioUsers.Add(user);
+        await db.SaveChangesAsync(ct);
+        cache.Invalidate(CacheSets.Projects);
+        cache.Invalidate(CacheSets.Skills);
+
+        return Ok("Sample data inserted.");
     }
 }
