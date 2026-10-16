@@ -35,17 +35,17 @@
                     <fieldset disabled="@_isSaving">
                         <h1 class="h4">@(IsEdit ? "Edit project" : "Add a project")</h1>
                         <div class="mb-2">
-                            <label class="form-label" for="project-title">Title</label>
+                            <label class="form-label required" for="project-title">Title</label>
                             <InputText id="project-title" class="form-control" @bind-Value="_form.Title" />
                             <ValidationMessage For="() => _form.Title" />
                         </div>
                         <div class="mb-2">
-                            <label class="form-label" for="project-description">Description</label>
+                            <label class="form-label required" for="project-description">Description</label>
                             <InputTextArea id="project-description" class="form-control" @bind-Value="_form.Description" />
                             <ValidationMessage For="() => _form.Description" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="project-image">Image URL</label>
+                            <label class="form-label required" for="project-image">Image URL</label>
                             <InputText id="project-image" class="form-control" @bind-Value="_form.ImageUrl" />
                             <ValidationMessage For="() => _form.ImageUrl" />
                         </div>

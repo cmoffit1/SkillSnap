@@ -57,7 +57,7 @@ For the App Service:
    Server=tcp:<server>.database.windows.net,1433;Database=SkillSnap;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
    ```
 
-6. Do not set `ApiBaseAddress` in production. The client defaults to the same HTTPS origin as the API. The separate client development server uses `https://localhost:7250`, configured in `SkillSnap.Client\wwwroot\appsettings.Development.json`.
+6. Do not set `ApiBaseAddress` in production. The client defaults to the same HTTPS origin as the API. The separate client development server uses `https://localhost:7292` and calls the API at `https://localhost:7250`, configured in `SkillSnap.Client\wwwroot\appsettings.Development.json`.
 7. Use an App Service plan that supports the selected application stack. The Free F1 tier doesn't support custom domains, but the built-in `*.azurewebsites.net` hostname is sufficient for the same-origin deployment. Free-tier quotas and availability limits still apply.
 8. Enable **HTTPS Only** in the App Service configuration so Azure rejects plain-HTTP client requests. The API also emits HSTS outside Development and redirects HTTP requests to HTTPS.
 

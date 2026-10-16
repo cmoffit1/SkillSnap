@@ -7,7 +7,7 @@
 - Language/framework: Blazor WebAssembly client, ASP.NET Core Web API with controllers, C#, .NET 10 (SDK 10.0.401), Entity Framework Core 10 (code first, SQL Server).
 - Key dependencies: Microsoft.EntityFrameworkCore.SqlServer and .Design, Azure.Extensions.AspNetCore.Configuration.Secrets, Azure.Identity, xUnit.
 - Layout: `SkillSnap.Api` (REST API), `SkillSnap.Client` (Blazor WebAssembly), `tests\SkillSnap.Api.Tests` (xUnit). Never place a project at the repo root, because its globbing would include the nested projects.
-- How to build and test: `dotnet build .\SkillSnap.sln`, `dotnet test .\SkillSnap.sln`. Run the API with `dotnet run --launch-profile https --project .\ SkillSnap.Api\SkillSnap.Api.csproj` (https://localhost:7115); the web app runs on https://localhost:7159.
+- How to build and test: `dotnet build .\SkillSnap.sln`, `dotnet test .\SkillSnap.sln`. Run the API with `dotnet run --launch-profile https --project .\ SkillSnap.Api\SkillSnap.Api.csproj` (https://localhost:7250); the web app runs on https://localhost:7292.
 - Database: local SQL Server 2025 Express (`.\SQLEXPRESS`), database `SkillSnap`. Migrations live in ` SkillSnap.Api\Data\Migrations`; add them with the local `dotnet ef` tool, for example `dotnet ef migrations add <Name> --project .\ SkillSnap.Api\SkillSnap.Api.csproj --output-dir Data\Migrations`.
 
 ## Conventions

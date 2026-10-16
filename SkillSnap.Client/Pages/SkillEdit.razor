@@ -34,12 +34,12 @@
                     <fieldset disabled="@_isSaving">
                         <h1 class="h4">@(IsEdit ? "Edit skill" : "Add a skill")</h1>
                         <div class="mb-2">
-                            <label class="form-label" for="skill-name">Name</label>
+                            <label class="form-label required" for="skill-name">Name</label>
                             <InputText id="skill-name" class="form-control" @bind-Value="_form.Name" />
                             <ValidationMessage For="() => _form.Name" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="skill-level">Level</label>
+                            <label class="form-label required" for="skill-level">Level</label>
                             <InputSelect id="skill-level" class="form-select" @bind-Value="_form.SkillLevelId">
                                 <option value="0">Select a level...</option>
                                 @foreach (var level in _levels)
