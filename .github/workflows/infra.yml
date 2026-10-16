@@ -1,0 +1,46 @@
+name: Infrastructure
+
+# Run manually the first time (and whenever infra\main.bicep changes).
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: Azure region (must be allowed for your subscription)
+        default: eastus2
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create the resource group
+        run: az group create -n "${{ vars.AZURE_RESOURCE_GROUP }}" -l "${{ inputs.location }}" -o none
+
+      - name: Deploy Bicep
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          resourceGroupName: ${{ vars.AZURE_RESOURCE_GROUP }}
+          template: infra/main.bicep
+          deploymentName: main
+          parameters: >-
+            location=${{ inputs.location }}
+            sqlAdminLogin=${{ vars.SQL_ADMIN_LOGIN || 'skillsnapadmin' }}
+            sqlAdminPassword=${{ secrets.SQL_ADMIN_PASSWORD }}
+            jwtKey=${{ secrets.JWT_KEY }}
+            seedAdminEmail=${{ vars.SEED_ADMIN_EMAIL }}
+            seedAdminPassword=${{ secrets.SEED_ADMIN_PASSWORD }}

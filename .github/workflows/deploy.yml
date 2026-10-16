@@ -1,0 +1,128 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # OIDC login to Azure, no stored credentials
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      # The API project also publishes the Blazor client, so one package serves both.
+      - run: dotnet publish SkillSnap.Api/SkillSnap.Api.csproj --configuration Release --output ./publish
+
+      # The migration bundle only needs the host to build; these placeholders are never used to connect.
+      - name: Build EF migration bundle
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+          ConnectionStrings__DefaultConnection: Server=localhost;Database=design;Encrypt=True
+          Jwt__Key: ci-design-time-key-0123456789-abcdefghijkl
+          Seed__AdminEmail: design@example.test
+          Seed__AdminPassword: Design-Time-Passw0rd!
+        run: |
+          dotnet tool restore
+          dotnet ef migrations bundle \
+            --project SkillSnap.Api --startup-project SkillSnap.Api \
+            --self-contained --runtime linux-x64 --output ./efbundle --force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api
+          path: publish
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: efbundle
+          path: efbundle
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ steps.outputs.outputs.url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: api
+          path: publish
+      - uses: actions/download-artifact@v4
+        with:
+          name: efbundle
+          path: bundle
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read resource names from the infrastructure deployment
+        id: outputs
+        run: |
+          out() { az deployment group show -g "${{ vars.AZURE_RESOURCE_GROUP }}" -n main --query "properties.outputs.$1.value" -o tsv; }
+          echo "webapp=$(out webAppName)" >> "$GITHUB_OUTPUT"
+          echo "url=$(out webAppUrl)" >> "$GITHUB_OUTPUT"
+          echo "sql=$(out sqlServerName)" >> "$GITHUB_OUTPUT"
+          echo "fqdn=$(out sqlServerFqdn)" >> "$GITHUB_OUTPUT"
+          echo "db=$(out databaseName)" >> "$GITHUB_OUTPUT"
+
+      # The free database auto-pauses; the first connection wakes it, so allow for retries.
+      - name: Apply database migrations
+        env:
+          SQL_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ip=$(curl -fsS https://api.ipify.org)
+          rule="gh-${{ github.run_id }}"
+          az sql server firewall-rule create -g "${{ vars.AZURE_RESOURCE_GROUP }}" -s "${{ steps.outputs.outputs.sql }}" -n "$rule" --start-ip-address "$ip" --end-ip-address "$ip" -o none
+          trap 'az sql server firewall-rule delete -g "${{ vars.AZURE_RESOURCE_GROUP }}" -s "${{ steps.outputs.outputs.sql }}" -n "$rule" -o none' EXIT
+          chmod +x bundle/efbundle
+          conn="Server=tcp:${{ steps.outputs.outputs.fqdn }},1433;Initial Catalog=${{ steps.outputs.outputs.db }};User ID=${{ vars.SQL_ADMIN_LOGIN || 'skillsnapadmin' }};Password=${SQL_PASSWORD};Encrypt=True;Connection Timeout=120;"
+          for attempt in 1 2 3; do
+            ./bundle/efbundle --connection "$conn" && exit 0
+            echo "Attempt $attempt failed; retrying in 30s (database may be resuming)."
+            sleep 30
+          done
+          exit 1
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ steps.outputs.outputs.webapp }}
+          package: publish
+
+      # The free plan can be slow to cold start, so retry for a few minutes.
+      - name: Smoke test
+        run: |
+          for attempt in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "${{ steps.outputs.outputs.url }}/" || true)
+            echo "Attempt $attempt: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          exit 1
